@@ -31,6 +31,10 @@ public:
 protected:
   std::string function_name;
   std::string integration_method;
+  double Npe;
+  double scintillation_decay_constant;
+  double scintillation_risetime;
+  
 };
 
 #endif

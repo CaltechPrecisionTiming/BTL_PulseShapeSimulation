@@ -23,7 +23,7 @@ PulseShape::~PulseShape()
 
 double PulseShape::Gauss( double x, double mean, double sigma, bool norm )
 {
-  return TMath::Gaus( x, mean, sigma, norm);
+  return 5e-3*TMath::Gaus( x, mean, sigma, norm);
 };
 
 double PulseShape::Exp( double x, double exponent )
@@ -35,15 +35,15 @@ double PulseShape::Exp( double x, double exponent )
 double PulseShape::RandomExp( double x, double exponent )
 {
   TRandom3 r(0);
-  return r.Poisson( 1e2*Exp( x, exponent ) );
+  return r.Poisson( 4.5e3*Exp( x, exponent ) );
 };
 
 double PulseShape::Convolution( double x, std::string function_name1, std::string function_name2 )
 {
   double value = .0;
-  double step_size = 0.5; //pico seconds units of the whole thing
-  double x_low  = -1e3;
-  double x_high = 1e3;
+  double step_size = 1; //nano seconds units of the whole thing
+  double x_low  = -1e1;//-1 micro second
+  double x_high = 1e3;// +1 micro second
   int steps = int( (x_high-x_low)/step_size );
   if (function_name1 == "Gauss" && function_name2 == "RandomExp")
   {
