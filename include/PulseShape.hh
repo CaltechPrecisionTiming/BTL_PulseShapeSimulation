@@ -15,6 +15,10 @@ class PulseShape
 {
 public:
 
+  static bool _debug;
+  static bool _info;
+  static bool _warning;
+
   PulseShape();
   PulseShape( std::string function_name );
   PulseShape( std::string function_name, std::string integration_method );
@@ -25,16 +29,26 @@ public:
   double RandomExp( double x, double exponent );
 
   double Convolution( double x, std::string function_name1, std::string function_name2 );
+  double ScintillationPulse( double x );
+  double DarkNoise( double x, double x_low, double x_high );//Dark Noise in the [x_low, x_high] region, units in ns
   bool SetSinglePhotonResponse( std::string function_name );
   bool SetIntegrationMethod(std::string integration_method );
+  void SetNpe( int npe ){ Npe = npe;};
+  void SetDCR( double dcr ){ DCR = dcr;};//in GHz
+  void SetSinglePhotonResponse( double sigma ){ single_photon_response_sigma = sigma;};//units in ns
+  void SetScintillationDecay( double tau_s ){ scintillation_decay_constant = tau_s;};//units in ns
 
 protected:
   std::string function_name;
   std::string integration_method;
-  double Npe;
-  double scintillation_decay_constant;
-  double scintillation_risetime;
-  
+  int Npe;// Number of photo-electrons (dE/dx*thickness*LightCollectionEfficiency*SiPM_PDE), about 4500 in LYSO
+  double scintillation_decay_constant;//decay constant of the scintillator (LYSO is 40 ns )
+  double scintillation_risetime;//rise time of the scintillator (LYSO is 60 ps)
+  double single_photon_response_sigma;//sigma of the gaussian used to model the single photon response
+  double DCR;//dark count rate in GHz
+  std::vector<double> t_sc_random;
+  std::vector<double> t_dc_random;
+
 };
 
 #endif

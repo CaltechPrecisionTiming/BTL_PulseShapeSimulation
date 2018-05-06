@@ -3,22 +3,39 @@
 
 PulseShape::PulseShape()
 {
-
+  //t_sc_random = NULL;
+  //t_dc_random = NULL;
 };
 
 PulseShape::PulseShape( std::string function_name )
 {
   //this->function_name = function_name;
+  //t_sc_random = NULL;
+  //t_dc_random = NULL;
 };
 
 PulseShape::PulseShape( std::string function_name, std::string integration_method )
 {
-
+  //t_sc_random = NULL;
+  //t_dc_random = NULL;
 };
 
 PulseShape::~PulseShape()
 {
-
+  /*
+ if ( t_sc_random != NULL )
+ {
+   delete [] t_sc_random;
+   //t_sc_random = NULL;
+   if ( _debug )std::cout <<  "[DEBUG]: deleting memory allocated for SC array" << std::endl;
+ }
+ if ( t_dc_random != NULL )
+ {
+   delete [] t_dc_random;
+   //t_dc_random = NULL;
+   if ( _debug )std::cout <<  "[DEBUG]: deleting memory allocated for DC array" << std::endl;
+ }
+ */
 };
 
 double PulseShape::Gauss( double x, double mean, double sigma, bool norm )
@@ -70,4 +87,50 @@ bool SetIntegrationMethod(std::string integration_method )
 {
   //this->integration_method = integration_method
   return true;
+};
+
+double PulseShape::ScintillationPulse( double x )
+{
+  if ( _warning && Npe <= 0 ) std::cout << "[WARNING] Npe is zero or negative, Npe = " << Npe << std::endl;
+  //if scintillation times are not yet been drawn then we draw them
+  if ( t_sc_random.size() == 0 )
+  {
+    t_sc_random.clear();
+    TRandom3 r(0);//define random variable
+    if ( _debug ) std::cout << "[DEBUG] filling vector with containing random times for SC" << std::endl;
+    for ( int i = 0; i < Npe; i++ )
+    {
+      t_sc_random.push_back( r.Exp(scintillation_decay_constant) );
+    }
+  }
+  double eval = 0;
+  for ( int i = 0; i < Npe; i++ )
+  {
+    eval += TMath::Gaus( x-t_sc_random.at(i), 0, single_photon_response_sigma);
+  }
+
+  return eval;
+};
+
+double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Noise in the [x_low, x_high] region, units in ns
+{
+  int DC = int( DCR*(x_high-x_low) );//number of dark counts in the time window
+  //if scintillation times are not yet been drawn then we draw them
+  if ( t_dc_random.size() == 0 )
+  {
+    t_dc_random.clear();
+    TRandom3 r(0);//define random variable
+    if ( _debug ) std::cout << "[DEBUG] filling vector with random times for DC" << std::endl;
+    for ( int i = 0; i < Npe; i++ )
+    {
+      t_dc_random.push_back( r.Uniform(x_low,x_high) );
+    }
+  }
+  double eval = 0;
+  for ( int i = 0; i < DC; i++ )
+  {
+    eval += TMath::Gaus( x-t_dc_random.at(i), 0, single_photon_response_sigma);
+  }
+  return eval;
+
 };
