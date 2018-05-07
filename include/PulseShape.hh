@@ -10,6 +10,7 @@
 #include <TH1F.h>
 #include <TMath.h>
 #include <TGraph.h>
+#include <TString.h>
 
 class PulseShape
 {
@@ -24,6 +25,8 @@ public:
   PulseShape( std::string function_name, std::string integration_method );
   ~PulseShape();
 
+  TString ParseCommandLine( int argc, char** argv, TString opt );
+  void GetCommandLineArgs(int argc, char **argv);
   double Gauss( double x, double mean, double sigma, bool norm = true );
   double Exp( double x, double exponent );
   double RandomExp( double x, double exponent );

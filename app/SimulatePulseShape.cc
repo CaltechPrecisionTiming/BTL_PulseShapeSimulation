@@ -12,7 +12,7 @@ bool PulseShape::_warning = true;
 
 int main ( int argc, char** argv )
 {
-  const double pe_threshold = 20;
+  const double pe_threshold = 100;
   const int n_experiments = 1000;
   PulseShape* ps;
   TGraph* total_pulse;
@@ -23,7 +23,7 @@ int main ( int argc, char** argv )
 
   double step = 0.01;
   double x_low  = -1e1;
-  double x_high = 3e1;
+  double x_high = 6e1;
 
   const int npoints  = (x_high-x_low)/step;
   std::cout << "[INFO] number of points per pulse: " << npoints << std::endl;
@@ -35,9 +35,9 @@ int main ( int argc, char** argv )
     if ( j % 100 == 0 )std::cout << "experiment #" << j << std::endl;
     //reset variables and objects
     ps = new PulseShape("gauss");
-    ps->SetNpe( 4.0e3 );
+    ps->SetNpe( 4.e3 );
     ps->SetDCR( 30. );
-    ps->SetSinglePhotonResponse( .1 );//units in ns
+    ps->SetSinglePhotonResponse(1.0);//units in ns
     ps->SetScintillationDecay( 40. );//units in ns
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;

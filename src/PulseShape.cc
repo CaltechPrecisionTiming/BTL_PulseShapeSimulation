@@ -38,6 +38,38 @@ PulseShape::~PulseShape()
  */
 };
 
+
+TString PulseShape::ParseCommandLine( int argc, char** argv, TString opt )
+{
+  TString out = "";
+  for (int i = 1; i < argc && out==""; i++ )
+  {
+    TString tmp( argv[i] );
+    if ( tmp.Contains("--"+opt) )
+    {
+      if(tmp.Contains("="))
+      {
+        out = tmp(tmp.First("=")+1, tmp.Length());
+      }
+      else
+      {
+        out = "true";
+      }
+    }
+  }
+  return out;
+};
+
+void PulseShape::GetCommandLineArgs(int argc, char **argv)
+{
+  TString pixel_input_file_path = ParseCommandLine( argc, argv, "pixel_input_file" );
+  if (pixel_input_file_path == "")
+  {
+    if ( _warning ) { std::cerr << "Pixel input file not provided" << std::endl; }
+  }
+};
+
+
 double PulseShape::Gauss( double x, double mean, double sigma, bool norm )
 {
   return 5e-3*TMath::Gaus( x, mean, sigma, norm);
@@ -104,9 +136,15 @@ double PulseShape::ScintillationPulse( double x )
     }
   }
   double eval = 0;
+  //t_sc_random.at(0) = 2;
   for ( int i = 0; i < Npe; i++ )
   {
-    eval += TMath::Gaus( x-t_sc_random.at(i), 0, single_photon_response_sigma);
+    //eval += TMath::Gaus( x-t_sc_random.at(i), 0, single_photon_response_sigma);
+    //eval += 0.5*(x-t_sc_random.at(i))/1.5*exp( -(x-t_sc_random.at(i))/1.5 ) - 0.5*(x-t_sc_random.at(i))/3.*exp( -(x-t_sc_random.at(i))/3.0 );
+    if ( x-t_sc_random.at(i) >= 0 )
+    {
+      eval += 2.9*((x-t_sc_random.at(i))/1.5)*exp( -(x-t_sc_random.at(i))/1.5 ) - 0.5*(x-t_sc_random.at(i))/8.*exp( -(x-t_sc_random.at(i))/8.0 );
+    }
   }
 
   return eval;

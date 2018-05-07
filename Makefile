@@ -8,11 +8,11 @@ CPPFLAGS += -g -std=c++14 -I$(INC)/include
 
 TARGET = SimulatePulseShape
 
-SRC = app/SimulatePulseShape.cc src/PulseShape.cc
+SRC = app/SimulatePulseShape.cc src/PulseShape.cc src/Configuration.cc
 OBJ = $(SRC:.cc=.o)
 
 
-TARGETS = $(TARGET) $(TARGET1) $(TARGET2)
+TARGETS = $(TARGET)
 
 all : $(TARGETS)
 
