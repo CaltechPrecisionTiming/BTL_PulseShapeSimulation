@@ -5,15 +5,37 @@
 #include <TFile.h>
 //LOCAL
 #include <PulseShape.hh>
+#include <Configuration.hh>
 
 bool PulseShape::_info    = false;
 bool PulseShape::_debug   = false;
-bool PulseShape::_warning = true;
+bool PulseShape::_warning = false;
 
 int main ( int argc, char** argv )
 {
-  const double pe_threshold = 100;
-  const int n_experiments = 1000;
+
+  Configuration* config = new Configuration(true);
+  config->GetCommandLineArgs(argc, argv);
+  config->ParseConfigurationFile(config->config_file);
+
+  const double n_threshold = config->n_threshold;
+  const int n_experiments = config->n_experiments;
+  const double DCR = config->DCR;
+  const double Npe = config->Npe;
+  const double scintillation_decay_constant = config->scintillation_decay_constant;
+  const double single_photon_risetime_response = config->single_photon_risetime_response;
+  const double single_photon_decaytime_response = config->single_photon_decaytime_response;
+
+  std::cout << "number of experiments is: " << n_experiments << std::endl;
+  std::cout << "Npe: " << Npe << std::endl;
+  std::cout << "n_threshold: " << n_threshold << std::endl;
+  std::cout << "scintillation decay constant: " << scintillation_decay_constant << " [ns]" << std::endl;
+  std::cout << "scintillation_risetime: " << config->scintillation_risetime << " [ns]" << std::endl;
+  std::cout << "single_photon_risetime_response: " << single_photon_risetime_response << " [ns]" << std::endl;
+  std::cout << "single_photon_decaytime_response:" << single_photon_decaytime_response << " [ns]" << std::endl;
+  std::cout << "DCR: " << DCR << " [GHz]" << std::endl;
+
+
   PulseShape* ps;
   TGraph* total_pulse;
   TGraph* scintillation_pulse;
@@ -35,10 +57,12 @@ int main ( int argc, char** argv )
     if ( j % 100 == 0 )std::cout << "experiment #" << j << std::endl;
     //reset variables and objects
     ps = new PulseShape("gauss");
-    ps->SetNpe( 4.e3 );
-    ps->SetDCR( 30. );
-    ps->SetSinglePhotonResponse(1.0);//units in ns
-    ps->SetScintillationDecay( 40. );//units in ns
+    ps->SetNpe( Npe );
+    ps->SetDCR( DCR );
+    //ps->SetSinglePhotonResponse( single_pe_risetime );//units in ns
+    ps->SetSinglePhotonRisetimeResponse( single_photon_risetime_response );
+    ps->SetSinglePhotonDecaytimeResponse( single_photon_decaytime_response );
+    ps->SetScintillationDecay( scintillation_decay_constant );//units in ns
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
     for( int i = 0; i < npoints; i++ )
@@ -56,7 +80,7 @@ int main ( int argc, char** argv )
     double t_stamp = -999;
     for( int i = 0; i < npoints; i++ )
     {
-      if ( y[i] > pe_threshold )
+      if ( y[i] > n_threshold )
       {
         t_stamp = (x[i]+x[i+1])/2.;
         break;
@@ -68,7 +92,7 @@ int main ( int argc, char** argv )
 
   ps = NULL;
 
-  TFile* f = new TFile("out.root", "recreate");
+  TFile* f = new TFile(config->output_file.c_str(), "recreate");
   total_pulse = new TGraph( npoints, x, y);
   scintillation_pulse = new TGraph( npoints, x, y_sc);
   dark_noise = new TGraph( npoints, x, y_dc);

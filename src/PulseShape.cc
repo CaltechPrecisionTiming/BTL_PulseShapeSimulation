@@ -38,38 +38,6 @@ PulseShape::~PulseShape()
  */
 };
 
-
-TString PulseShape::ParseCommandLine( int argc, char** argv, TString opt )
-{
-  TString out = "";
-  for (int i = 1; i < argc && out==""; i++ )
-  {
-    TString tmp( argv[i] );
-    if ( tmp.Contains("--"+opt) )
-    {
-      if(tmp.Contains("="))
-      {
-        out = tmp(tmp.First("=")+1, tmp.Length());
-      }
-      else
-      {
-        out = "true";
-      }
-    }
-  }
-  return out;
-};
-
-void PulseShape::GetCommandLineArgs(int argc, char **argv)
-{
-  TString pixel_input_file_path = ParseCommandLine( argc, argv, "pixel_input_file" );
-  if (pixel_input_file_path == "")
-  {
-    if ( _warning ) { std::cerr << "Pixel input file not provided" << std::endl; }
-  }
-};
-
-
 double PulseShape::Gauss( double x, double mean, double sigma, bool norm )
 {
   return 5e-3*TMath::Gaus( x, mean, sigma, norm);
@@ -123,7 +91,29 @@ bool SetIntegrationMethod(std::string integration_method )
 
 double PulseShape::ScintillationPulse( double x )
 {
-  if ( _warning && Npe <= 0 ) std::cout << "[WARNING] Npe is zero or negative, Npe = " << Npe << std::endl;
+  if ( Npe <= 0 )
+  {
+    std::cerr << "[Error] Npe is zero or negative, Npe = " << Npe << std::endl;
+    exit(0);
+  }
+  if ( scintillation_decay_constant <= 0 )
+  {
+    std::cerr << "[Error] scintillation_decay_constant is zero or negative, scintillation_decay_constant = "
+              << scintillation_decay_constant << std::endl;
+    exit(0);
+  }
+  if ( single_photon_risetime_response <= 0 )
+  {
+    std::cerr << "[Error] single_photon_risetime_response is zero or negative, single_photon_risetime_response = "
+              << single_photon_risetime_response << std::endl;
+    exit(0);
+  }
+  if ( single_photon_decaytime_response <= 0 )
+  {
+    std::cerr << "[Error] single_photon_decaytime_response is zero or negative, single_photon_decaytime_response = "
+              << single_photon_decaytime_response << std::endl;
+    exit(0);
+  }
   //if scintillation times are not yet been drawn then we draw them
   if ( t_sc_random.size() == 0 )
   {
@@ -143,7 +133,8 @@ double PulseShape::ScintillationPulse( double x )
     //eval += 0.5*(x-t_sc_random.at(i))/1.5*exp( -(x-t_sc_random.at(i))/1.5 ) - 0.5*(x-t_sc_random.at(i))/3.*exp( -(x-t_sc_random.at(i))/3.0 );
     if ( x-t_sc_random.at(i) >= 0 )
     {
-      eval += 2.9*((x-t_sc_random.at(i))/1.5)*exp( -(x-t_sc_random.at(i))/1.5 ) - 0.5*(x-t_sc_random.at(i))/8.*exp( -(x-t_sc_random.at(i))/8.0 );
+      eval += 2.9*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
+              - 0.5*(x-t_sc_random.at(i))/single_photon_decaytime_response*exp( -(x-t_sc_random.at(i))/single_photon_decaytime_response );
     }
   }
 
@@ -154,12 +145,28 @@ double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Nois
 {
   int DC = int( DCR*(x_high-x_low) );//number of dark counts in the time window
   //if scintillation times are not yet been drawn then we draw them
+  if ( _warning && DC == 0 )
+  {
+    std::cerr << "[WARNING] DC is zero, are you sure about this? DCR =  " << DCR << std::endl;
+  }
+  if ( single_photon_risetime_response <= 0 )
+  {
+    std::cerr << "[Error] single_photon_risetime_response is zero or negative, single_photon_risetime_response = "
+              << single_photon_risetime_response << std::endl;
+    exit(0);
+  }
+  if ( single_photon_decaytime_response <= 0 )
+  {
+    std::cerr << "[Error] single_photon_decaytime_response is zero or negative, single_photon_decaytime_response = "
+              << single_photon_decaytime_response << std::endl;
+    exit(0);
+  }
   if ( t_dc_random.size() == 0 )
   {
     t_dc_random.clear();
     TRandom3 r(0);//define random variable
     if ( _debug ) std::cout << "[DEBUG] filling vector with random times for DC" << std::endl;
-    for ( int i = 0; i < Npe; i++ )
+    for ( int i = 0; i < DC; i++ )
     {
       t_dc_random.push_back( r.Uniform(x_low,x_high) );
     }
@@ -167,7 +174,8 @@ double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Nois
   double eval = 0;
   for ( int i = 0; i < DC; i++ )
   {
-    eval += TMath::Gaus( x-t_dc_random.at(i), 0, single_photon_response_sigma);
+    eval += 2.9*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
+            - 0.5*(x-t_sc_random.at(i))/single_photon_decaytime_response*exp( -(x-t_sc_random.at(i))/single_photon_decaytime_response );
   }
   return eval;
 

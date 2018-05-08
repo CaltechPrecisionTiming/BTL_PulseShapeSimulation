@@ -1,0 +1,6 @@
+Npe 4000
+ScintillationDecayConstant 40
+ScintillationRisetime 0
+SinglePhotonRisetimeResponse 1.6
+SinglePhotonDecaytimeResponse 8.0
+DarkCountRate 0

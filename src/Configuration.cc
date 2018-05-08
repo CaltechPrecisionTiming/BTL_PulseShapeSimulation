@@ -15,7 +15,23 @@ Configuration::Configuration(std::string fname, bool verb) {
         std::cerr << "[ERROR] Could not open configuration file " << fname << std::endl;
         exit(0);
     }
-}
+};
+
+void Configuration::ParseConfigurationFile(std::string config_file)
+{
+  std::string configLine;
+  std::ifstream configStream(config_file);
+  if ( configStream.is_open() ) {
+      while ( getline(configStream, configLine) ) {
+          parseConfigurationLine(configLine);
+      }
+      configStream.close();
+  }
+  else {
+      std::cerr << "[ERROR] Could not open configuration file " << config_file << std::endl;
+      exit(0);
+  }
+};
 
 int Configuration::nextConfigurationElement(std::stringstream &ss, std::string &item) {
     while( std::getline(ss, item, ' ') ) {
@@ -152,6 +168,55 @@ void Configuration::parseConfigurationLine(std::string line) {
 
       channels[chNum] = aux_ch;
     }
+    else if (line.substr(0, 3) == "Npe")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      Npe = std::stoi(item);
+      if( verbose ){ std::cout << "[VERBOSE] Npe = " << Npe << std::endl;}
+    }
+    else if (line.substr(0, 26) == "ScintillationDecayConstant")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      scintillation_decay_constant = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE]  scintillation_decay_constant = " << scintillation_decay_constant << std::endl;}
+    }
+    else if (line.substr(0, 21) == "ScintillationRisetime")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      scintillation_risetime = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] scintillation_risetime = " << scintillation_risetime << std::endl;}
+    }
+    else if (line.substr(0, 28) == "SinglePhotonRisetimeResponse")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      single_photon_risetime_response = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] single_photon_risetime_response = " << single_photon_risetime_response << std::endl;}
+    }
+    else if (line.substr(0, 29) == "SinglePhotonDecaytimeResponse")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      single_photon_decaytime_response = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] single_photon_decaytime_response = " << single_photon_decaytime_response << std::endl;}
+    }
+    else if (line.substr(0, 13) == "DarkCountRate")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      DCR = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] DCR = " << DCR << std::endl;}
+    }
+    else if (line.substr(0, 10) == "nThreshold")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      n_threshold = std::stoi(item);
+      if( verbose ){ std::cout << "[VERBOSE] n_threshold = " << n_threshold << std::endl;}
+    }
 
 }
 
@@ -173,3 +238,50 @@ bool Configuration::isValid() {
   if (channels.size() > 0) return true;
   else return false;
 }
+
+TString Configuration::ParseCommandLine( int argc, char** argv, TString opt )
+{
+  TString out = "";
+  for (int i = 1; i < argc && out==""; i++ )
+  {
+    TString tmp( argv[i] );
+    if ( tmp.Contains("--"+opt) )
+    {
+      if(tmp.Contains("="))
+      {
+        out = tmp(tmp.First("=")+1, tmp.Length());
+      }
+      else
+      {
+        out = "true";
+      }
+    }
+  }
+  return out;
+};
+
+void Configuration::GetCommandLineArgs(int argc, char **argv)
+{
+  output_file = ParseCommandLine( argc, argv, "output_file" );
+  if (output_file == "")
+  {
+    if ( _warning ) { std::cerr << "output file not provided" << std::endl; }
+  }
+
+  config_file = ParseCommandLine( argc, argv, "config_file" );
+  if (config_file == "")
+  {
+    if ( _warning ) { std::cerr << "config file not provided" << std::endl; }
+  }
+
+  TString n_exp = ParseCommandLine( argc, argv, "n_experiments" );
+  if (n_exp == "")
+  {
+    if ( _warning ) { std::cerr << "number of experiments not provided, using 1k" << std::endl; }
+    n_experiments = 1000;
+  }
+  else
+  {
+    n_experiments = atoi(n_exp);
+  }
+};

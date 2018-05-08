@@ -25,8 +25,6 @@ public:
   PulseShape( std::string function_name, std::string integration_method );
   ~PulseShape();
 
-  TString ParseCommandLine( int argc, char** argv, TString opt );
-  void GetCommandLineArgs(int argc, char **argv);
   double Gauss( double x, double mean, double sigma, bool norm = true );
   double Exp( double x, double exponent );
   double RandomExp( double x, double exponent );
@@ -39,6 +37,8 @@ public:
   void SetNpe( int npe ){ Npe = npe;};
   void SetDCR( double dcr ){ DCR = dcr;};//in GHz
   void SetSinglePhotonResponse( double sigma ){ single_photon_response_sigma = sigma;};//units in ns
+  void SetSinglePhotonRisetimeResponse( double risetime ){ single_photon_risetime_response = risetime;};//units in ns
+  void SetSinglePhotonDecaytimeResponse( double decaytime ){ single_photon_decaytime_response = decaytime;};//units in ns
   void SetScintillationDecay( double tau_s ){ scintillation_decay_constant = tau_s;};//units in ns
 
 protected:
@@ -48,6 +48,8 @@ protected:
   double scintillation_decay_constant;//decay constant of the scintillator (LYSO is 40 ns )
   double scintillation_risetime;//rise time of the scintillator (LYSO is 60 ps)
   double single_photon_response_sigma;//sigma of the gaussian used to model the single photon response
+  double single_photon_risetime_response;//tau1 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
+  double single_photon_decaytime_response;//tau2 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
   double DCR;//dark count rate in GHz
   std::vector<double> t_sc_random;
   std::vector<double> t_dc_random;
