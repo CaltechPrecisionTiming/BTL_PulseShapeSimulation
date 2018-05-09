@@ -32,6 +32,7 @@ public:
   double Convolution( double x, std::string function_name1, std::string function_name2 );
   double ScintillationPulse( double x );
   double DarkNoise( double x, double x_low, double x_high );//Dark Noise in the [x_low, x_high] region, units in ns
+  double HighPassFilterResponse( double x );
   bool SetSinglePhotonResponse( std::string function_name );
   bool SetIntegrationMethod(std::string integration_method );
   void SetNpe( int npe ){ Npe = npe;};
@@ -40,6 +41,8 @@ public:
   void SetSinglePhotonRisetimeResponse( double risetime ){ single_photon_risetime_response = risetime;};//units in ns
   void SetSinglePhotonDecaytimeResponse( double decaytime ){ single_photon_decaytime_response = decaytime;};//units in ns
   void SetScintillationDecay( double tau_s ){ scintillation_decay_constant = tau_s;};//units in ns
+  void NormalizeSinglePhotonResponse();
+  double GetSinglePhotonResponseNormalization(){return single_photon_response_normalization;};
 
 protected:
   std::string function_name;
@@ -50,9 +53,13 @@ protected:
   double single_photon_response_sigma;//sigma of the gaussian used to model the single photon response
   double single_photon_risetime_response;//tau1 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
   double single_photon_decaytime_response;//tau2 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
+  double high_pass_filter_RC;//tau2 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
   double DCR;//dark count rate in GHz
+  double single_photon_response_normalization;
   std::vector<double> t_sc_random;
   std::vector<double> t_dc_random;
+  const double A = 3.0;
+  const double B = 0.5;
 
 };
 

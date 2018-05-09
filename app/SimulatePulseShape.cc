@@ -63,6 +63,8 @@ int main ( int argc, char** argv )
     ps->SetSinglePhotonRisetimeResponse( single_photon_risetime_response );
     ps->SetSinglePhotonDecaytimeResponse( single_photon_decaytime_response );
     ps->SetScintillationDecay( scintillation_decay_constant );//units in ns
+    ps->NormalizeSinglePhotonResponse();
+    std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
     for( int i = 0; i < npoints; i++ )

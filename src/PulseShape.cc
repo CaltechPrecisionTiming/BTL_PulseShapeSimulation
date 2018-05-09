@@ -133,12 +133,12 @@ double PulseShape::ScintillationPulse( double x )
     //eval += 0.5*(x-t_sc_random.at(i))/1.5*exp( -(x-t_sc_random.at(i))/1.5 ) - 0.5*(x-t_sc_random.at(i))/3.*exp( -(x-t_sc_random.at(i))/3.0 );
     if ( x-t_sc_random.at(i) >= 0 )
     {
-      eval += 2.9*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
+      eval += 3*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
               - 0.5*(x-t_sc_random.at(i))/single_photon_decaytime_response*exp( -(x-t_sc_random.at(i))/single_photon_decaytime_response );
     }
   }
 
-  return eval;
+  return eval/single_photon_response_normalization;
 };
 
 double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Noise in the [x_low, x_high] region, units in ns
@@ -174,9 +174,46 @@ double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Nois
   double eval = 0;
   for ( int i = 0; i < DC; i++ )
   {
-    eval += 2.9*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
+    if ( x-t_dc_random.at(i) >= 0 )
+    {
+      eval += 3*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
             - 0.5*(x-t_sc_random.at(i))/single_photon_decaytime_response*exp( -(x-t_sc_random.at(i))/single_photon_decaytime_response );
+    }
   }
-  return eval;
+  return eval/single_photon_response_normalization;
 
+};
+
+void PulseShape::NormalizeSinglePhotonResponse()
+{
+  double x_low  = .0;//ns
+  double x_high = 200;//ns
+  double step = 1e-3; //1ps
+  const int n_iterations = (x_high-x_low)/step;
+  double max_val = 0;
+  for ( int i = 0; i < n_iterations; i++ )
+  {
+    double x = x_low + double(i)*step;
+    double f_x =  3*(x/single_photon_risetime_response)*exp( -x/single_photon_risetime_response )
+          - 0.5*(x/single_photon_decaytime_response)*exp( -x/single_photon_decaytime_response );
+    if ( f_x > max_val ) max_val = f_x;
+  }
+
+  if ( max_val > 0 )
+  {
+    single_photon_response_normalization = max_val;
+    return;
+  }
+  else
+  {
+    std::cerr << "[ERROR] single_photon_response_normalization zerp or negative\nEXIT" << std::endl;
+    exit(0);
+  }
+
+};
+
+double PulseShape::HighPassFilterResponse( double x )
+{
+  return high_pass_filter_RC*(A*x/single_photon_risetime_response*exp( -x/single_photon_risetime_response )
+        - B*x/single_photon_decaytime_response*exp( -x/single_photon_decaytime_response ));
 };
