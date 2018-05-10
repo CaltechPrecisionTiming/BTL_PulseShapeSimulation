@@ -203,6 +203,13 @@ void Configuration::parseConfigurationLine(std::string line) {
       single_photon_decaytime_response = std::stof(item);
       if( verbose ){ std::cout << "[VERBOSE] single_photon_decaytime_response = " << single_photon_decaytime_response << std::endl;}
     }
+    else if (line.substr(0, 29) == "HighPassFilterRC")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      high_pass_filter_RC = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] high_pass_filter_RC = " << high_pass_filter_RC << std::endl;}
+    }
     else if (line.substr(0, 13) == "DarkCountRate")
     {
       nextConfigurationElement(ss, item);

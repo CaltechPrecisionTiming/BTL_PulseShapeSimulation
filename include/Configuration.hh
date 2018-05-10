@@ -85,6 +85,7 @@ class Configuration {
       double scintillation_risetime = 0;//rise time of the scintillator (LYSO is 60 ps)
       double single_photon_risetime_response = 0;//tau1 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
       double single_photon_decaytime_response = 0;//tau2 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
+      double high_pass_filter_RC;//tau of the RC HighPassFilter (R*C) in ns
       double DCR  = 0;//dark count rate in GHz
 
 
