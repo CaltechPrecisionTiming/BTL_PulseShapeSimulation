@@ -25,6 +25,7 @@ int main ( int argc, char** argv )
   const double scintillation_decay_constant = config->scintillation_decay_constant;
   const double single_photon_risetime_response = config->single_photon_risetime_response;
   const double single_photon_decaytime_response = config->single_photon_decaytime_response;
+  const double high_pass_filter_RC = config->high_pass_filter_RC;
 
   std::cout << "number of experiments is: " << n_experiments << std::endl;
   std::cout << "Npe: " << Npe << std::endl;
@@ -33,6 +34,7 @@ int main ( int argc, char** argv )
   std::cout << "scintillation_risetime: " << config->scintillation_risetime << " [ns]" << std::endl;
   std::cout << "single_photon_risetime_response: " << single_photon_risetime_response << " [ns]" << std::endl;
   std::cout << "single_photon_decaytime_response:" << single_photon_decaytime_response << " [ns]" << std::endl;
+  std::cout << "high_pass_filter_RC: " << high_pass_filter_RC << std::endl;
   std::cout << "DCR: " << DCR << " [GHz]" << std::endl;
 
 
@@ -63,10 +65,11 @@ int main ( int argc, char** argv )
     ps->SetSinglePhotonRisetimeResponse( single_photon_risetime_response );
     ps->SetSinglePhotonDecaytimeResponse( single_photon_decaytime_response );
     ps->SetScintillationDecay( scintillation_decay_constant );//units in ns
+    ps->SetHighPassFilterRC(high_pass_filter_RC);
     ps->NormalizeSinglePhotonResponse();
-    std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
+    //std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
     ps->NormalizeSinglePhotonResponseHighPassFilter();
-    std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
+    //std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
     for( int i = 0; i < npoints; i++ )

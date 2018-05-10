@@ -41,6 +41,7 @@ public:
   void SetSinglePhotonRisetimeResponse( double risetime ){ single_photon_risetime_response = risetime;};//units in ns
   void SetSinglePhotonDecaytimeResponse( double decaytime ){ single_photon_decaytime_response = decaytime;};//units in ns
   void SetScintillationDecay( double tau_s ){ scintillation_decay_constant = tau_s;};//units in ns
+  void SetHighPassFilterRC( double rc ){ high_pass_filter_RC = rc;};
   void NormalizeSinglePhotonResponse();
   void NormalizeSinglePhotonResponseHighPassFilter();
   double GetSinglePhotonResponseNormalization(){return single_photon_response_normalization;};
@@ -54,7 +55,7 @@ protected:
   double single_photon_response_sigma;//sigma of the gaussian used to model the single photon response
   double single_photon_risetime_response;//tau1 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
   double single_photon_decaytime_response;//tau2 in of A*t/tau1*exp(-t/tau1) - B*t/tau2*exp(-t/tau2) used to model the single photon response
-  double high_pass_filter_RC = 0.25;//tau of the RC HighPassFilter (R*C) in ns
+  double high_pass_filter_RC;//tau of the RC HighPassFilter (R*C) in ns
   double DCR;//dark count rate in GHz
   double single_photon_response_normalization;
   std::vector<double> t_sc_random;

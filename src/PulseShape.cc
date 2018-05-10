@@ -210,7 +210,7 @@ void PulseShape::NormalizeSinglePhotonResponse()
   }
   else
   {
-    std::cerr << "[ERROR] single_photon_response_normalization zerp or negative\nEXIT" << std::endl;
+    std::cerr << "[ERROR] single_photon_response_normalization zero or negative\nEXIT" << std::endl;
     exit(0);
   }
 
@@ -261,7 +261,7 @@ void PulseShape::NormalizeSinglePhotonResponseHighPassFilter()
   }
   else
   {
-    std::cerr << "[ERROR] single_photon_response_normalization zerp or negative\nEXIT" << std::endl;
+    std::cerr << "[ERROR] HighPassFilter zerp or negative\nEXIT" << std::endl;
     exit(0);
   }
 };
