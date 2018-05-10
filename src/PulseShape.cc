@@ -179,8 +179,8 @@ double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Nois
     if ( x-t_dc_random.at(i) >= 0 )
     {
       /*eval += A*((x-t_dc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_dc_random.at(i))/single_photon_risetime_response )
-            - B*((x-t_dc_random.at(i))/single_photon_decaytime_response)*exp( -(x-t_dc_random.at(i))/single_photon_decaytime_response );
-            */
+            - B*((x-t_dc_random.at(i))/single_photon_decaytime_response)*exp( -(x-t_dc_random.at(i))/single_photon_decaytime_response );*/
+
       eval += HighPassFilterResponse(x-t_dc_random.at(i));
     }
   }
