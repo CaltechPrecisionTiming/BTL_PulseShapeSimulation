@@ -3,6 +3,7 @@
 //ROOT
 #include <TCanvas.h>
 #include <TFile.h>
+#include <TTree.h>
 //LOCAL
 #include <PulseShape.hh>
 #include <Configuration.hh>
@@ -13,6 +14,11 @@ bool PulseShape::_warning = false;
 
 int main ( int argc, char** argv )
 {
+
+
+
+  TH1F* h = new TH1F("pulse_time", "pulse_time", 2000, -10,10);
+  TTree* pulse = new TTree("pulse", "Digitized waveforms");
 
   Configuration* config = new Configuration(true);
   config->GetCommandLineArgs(argc, argv);
@@ -43,7 +49,6 @@ int main ( int argc, char** argv )
   TGraph* scintillation_pulse;
   TGraph* dark_noise;
 
-  TH1F* h = new TH1F("pulse_time", "pulse_time", 2000, -10,10);
 
   double step = 0.01;
   double x_low  = -1e1;
@@ -54,6 +59,12 @@ int main ( int argc, char** argv )
   std::cout << "[INFO] sampling rate is: " << step  << " ns" << std::endl;
   double x[npoints];
   double y[npoints], y_sc[npoints], y_dc[npoints];
+  int i_evt;
+  pulse->Branch("i_evt", &i_evt, "i_evt/i");
+  pulse->Branch("channel", y, Form("channel[%d]/D", npoints));
+  pulse->Branch("channel_sc", y_sc, Form("channel_sc[%d]/D", npoints));
+  pulse->Branch("channel_dc", y_dc, Form("channel_dc[%d]/D", npoints));
+  pulse->Branch("time", x, Form("time[%d]/D", npoints));
   for ( int j = 0; j < n_experiments; j++ )
   {
     if ( j % 100 == 0 )std::cout << "experiment #" << j << std::endl;
@@ -95,6 +106,8 @@ int main ( int argc, char** argv )
     }
 
     h->Fill(t_stamp);
+    i_evt = j;
+    pulse->Fill();
   }
 
   ps = NULL;
@@ -112,6 +125,7 @@ int main ( int argc, char** argv )
   cv->SaveAs("Convolution1.pdf");
   cv->SetLogy();
   cv->SaveAs("Convolution2.pdf");
+  pulse->Write();
   total_pulse->Write("total_pulse");
   scintillation_pulse->Write("scintillation_pulse");
   dark_noise->Write("dark_noise");
