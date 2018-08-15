@@ -199,6 +199,11 @@ double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Nois
 
 };
 
+
+/*
+4-point LGAD response.
+Need to promote this to Nicolo's code
+*/
 double PulseShape::LGADPulse( double x )
 {
   //x is assumed to be in units of ns
@@ -209,7 +214,7 @@ double PulseShape::LGADPulse( double x )
   else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
   else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
   else eval = 0;
-  
+
   //Delta Function
   //if (x==0) eval = 1;
 
@@ -217,10 +222,14 @@ double PulseShape::LGADPulse( double x )
 };
 
 
+/*
+This is the convolution using the Simpson rule, its now taking the semi-gaussian impulse ImpulseResponse
+and then convoluting now with the 4-point LGAD response.
+*/
 double PulseShape::LGADShapedPulse( double x )
 {
-  double eval = 0;  
-  
+  double eval = 0;
+
   const double integrationStep = 1.0; //in ns
   const double integrationLow = -100;
   const double integrationHigh = 100;
@@ -237,12 +246,12 @@ double PulseShape::LGADShapedPulse( double x )
       double x0 = integrationLow + i*integrationStep;
       double x2 = integrationLow + (i+1)*integrationStep;
       double x1 = (x0+x2)/2.;
-      eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0) 
-			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1) 
-			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2) 
+      eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0)
+			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1)
+			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2)
 			);
   }
-  
+
 
 
 
@@ -281,17 +290,17 @@ void PulseShape::NormalizeSinglePhotonResponse()
 
 double PulseShape::ImpulseResponse( double x )
 {
-  double eval = 0;  
+  double eval = 0;
   double omegashaper = NFilter_ / shapingTime_;
-  
+
   if (x>=0) {
     eval = exp(-omegashaper*x) * pow(x,NFilter_);
   } else {
     eval = 0;
   }
-  
+
   //First attempt, hard coded from Mathematica notebook
-  //NFilter = 2; shaping time = 4ns ; x is in units of ns  
+  //NFilter = 2; shaping time = 4ns ; x is in units of ns
   // if (x >= 0) eval = 4.61816e-1 * exp(-0.5*x)*x*x;
   // else eval = 0;
 
