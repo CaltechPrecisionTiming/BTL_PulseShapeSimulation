@@ -188,6 +188,43 @@ double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Nois
 
 };
 
+double PulseShape::LGADPulse( double x )
+{
+  //x is assumed to be in units of ns
+  double eval = 0;
+
+  // //4-point signal from Gregory Deptuch
+  // if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
+  // else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
+  // else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
+  // else eval = 0;
+  
+  //Delta Function
+  if (x==0) eval = 1;
+
+  return eval;
+};
+
+
+double PulseShape::LGADShapedPulse( double x )
+{
+  double eval = 0;  
+  
+  const double integrationStep = 0.01; //in ns
+  const double integrationLow = -100;
+  const double integrationHigh = 100;
+  const int NIntegrationPoints = (integrationHigh - integrationLow) / integrationStep;
+  for (int i=0; i < NIntegrationPoints; i++) {
+    double s = integrationLow + i * integrationStep;
+    eval += LGADPulse(s) * ImpulseResponse(x-s) * integrationStep;
+  }
+  //eval = eval / (integrationHigh - integrationLow);
+
+  //return eval/single_photon_response_normalization;
+  return eval;
+};
+
+
 void PulseShape::NormalizeSinglePhotonResponse()
 {
   double x_low  = .0;//ns
@@ -214,6 +251,18 @@ void PulseShape::NormalizeSinglePhotonResponse()
     exit(0);
   }
 
+};
+
+double PulseShape::ImpulseResponse( double x )
+{
+  double eval = 0;
+  
+  //NFilter = 2; shaping time = 4ns ; x is in units of ns
+  if (x >= 0) eval = 4.61816e-1 * exp(-0.5*x)*x*x;
+  else eval = 0;
+
+
+  return eval;
 };
 
 double PulseShape::HighPassFilterResponse( double x )

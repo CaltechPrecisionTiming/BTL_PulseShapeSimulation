@@ -51,8 +51,8 @@ int main ( int argc, char** argv )
 
 
   double step = 0.01;
-  double x_low  = -1e1;
-  double x_high = 6e1;
+  double x_low  = 0;
+  double x_high = 50;
 
   const int npoints  = (x_high-x_low)/step;
   std::cout << "[INFO] number of points per pulse: " << npoints << std::endl;
@@ -83,14 +83,20 @@ int main ( int argc, char** argv )
     //std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
+
+    //normalize pulse shape to area = 1;
+    double normalization = 0;
+    for( int i = 0; i < int(100 / 0.01); i++ ) normalization += ps->LGADShapedPulse( i * 0.01) * 0.01;
+
     for( int i = 0; i < npoints; i++ )
     {
       x[i] = x_low + double(i)*step;
       //if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
       //y[i]  = ps->Convolution(x[i], "Gauss", "RandomExp");
-      y_sc[i]  = ps->ScintillationPulse(x[i]);
-      y_dc[i]  = ps->DarkNoise(x[i], x_low, x_high);
-      y[i]     = y_sc[i] + y_dc[i];
+      y_sc[i]  = ps->LGADShapedPulse(x[i]) / normalization;
+      //cout << i << " : " << y_sc[i] << "\n";
+      // y_dc[i]  = ps->DarkNoise(x[i], x_low, x_high);
+      y[i]     = y_sc[i];// + y_dc[i];
       if( y[i] > y_max ) y_max = y[i];
     }
     delete ps;//release memory of pulseshape object.
@@ -122,6 +128,10 @@ int main ( int argc, char** argv )
   cv->SetRightMargin(0.05);
   //h->GetXaxis()->SetRangeUser(-1e5, 0);
   total_pulse->Draw("AC*");
+  total_pulse->GetXaxis()->SetTitle("time [ns]");
+  total_pulse->GetYaxis()->SetTitle("Amplitude [normalized]");
+  total_pulse->GetYaxis()->SetTitleOffset(1.6);
+ 
   cv->SaveAs("Convolution1.pdf");
   cv->SetLogy();
   cv->SaveAs("Convolution2.pdf");

@@ -31,8 +31,11 @@ public:
 
   double Convolution( double x, std::string function_name1, std::string function_name2 );
   double ScintillationPulse( double x );
+  double LGADPulse( double x );
+  double LGADShapedPulse( double x );
   double DarkNoise( double x, double x_low, double x_high );//Dark Noise in the [x_low, x_high] region, units in ns
   double HighPassFilterResponse( double x );
+  double ImpulseResponse( double x );
   bool SetSinglePhotonResponse( std::string function_name );
   bool SetIntegrationMethod(std::string integration_method );
   void SetNpe( int npe ){ Npe = npe;};
