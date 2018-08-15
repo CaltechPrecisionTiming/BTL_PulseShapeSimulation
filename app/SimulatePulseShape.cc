@@ -119,6 +119,7 @@ int main ( int argc, char** argv )
   cv->SetBottomMargin(0.12);
   cv->SetRightMargin(0.05);
   //h->GetXaxis()->SetRangeUser(-1e5, 0);
+  total_pulse->SetTitle("");
   total_pulse->Draw("AC*");
   total_pulse->GetXaxis()->SetTitle("time [ns]");
   total_pulse->GetYaxis()->SetTitle("Amplitude [normalized]");

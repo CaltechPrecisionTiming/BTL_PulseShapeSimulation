@@ -204,14 +204,14 @@ double PulseShape::LGADPulse( double x )
   //x is assumed to be in units of ns
   double eval = 0;
 
-  // //4-point signal from Gregory Deptuch
-  // if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
-  // else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
-  // else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
-  // else eval = 0;
+  //4-point signal from Gregory Deptuch
+  if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
+  else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
+  else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
+  else eval = 0;
   
   //Delta Function
-  if (x==0) eval = 1;
+  //if (x==0) eval = 1;
 
   return eval;
 };
@@ -221,15 +221,30 @@ double PulseShape::LGADShapedPulse( double x )
 {
   double eval = 0;  
   
-  const double integrationStep = 0.01; //in ns
+  const double integrationStep = 1.0; //in ns
   const double integrationLow = -100;
   const double integrationHigh = 100;
   const int NIntegrationPoints = (integrationHigh - integrationLow) / integrationStep;
-  for (int i=0; i < NIntegrationPoints; i++) {
-    double s = integrationLow + i * integrationStep;
-    eval += LGADPulse(s) * NormalizedImpulseResponse(x-s) * integrationStep;
-  }
+  // for (int i=0; i < NIntegrationPoints; i++) {
+  //   double s = integrationLow + i * integrationStep;
+  //   eval += LGADPulse(s) * NormalizedImpulseResponse(x-s) * integrationStep;
+  // }
   //eval = eval / (integrationHigh - integrationLow);
+
+  //Simpson's rule 1/3
+  double h  = integrationStep/2.0;
+  for ( int i = 0; i < NIntegrationPoints; i++ ) {
+      double x0 = integrationLow + i*integrationStep;
+      double x2 = integrationLow + (i+1)*integrationStep;
+      double x1 = (x0+x2)/2.;
+      eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0) 
+			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1) 
+			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2) 
+			);
+  }
+  
+
+
 
   //return eval/single_photon_response_normalization;
   return eval;
