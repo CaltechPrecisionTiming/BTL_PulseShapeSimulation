@@ -24,24 +24,16 @@ int main ( int argc, char** argv )
   config->GetCommandLineArgs(argc, argv);
   config->ParseConfigurationFile(config->config_file);
 
-  const double n_threshold = config->n_threshold;
+  const int NFilter = config->NFilter;
   const int n_experiments = config->n_experiments;
-  const double DCR = config->DCR;
-  const double Npe = config->Npe;
-  const double scintillation_decay_constant = config->scintillation_decay_constant;
-  const double single_photon_risetime_response = config->single_photon_risetime_response;
-  const double single_photon_decaytime_response = config->single_photon_decaytime_response;
-  const double high_pass_filter_RC = config->high_pass_filter_RC;
+  const double ShapingTime = config->ShapingTime;
+  const double SNR = config->SNR;
+  
 
   std::cout << "number of experiments is: " << n_experiments << std::endl;
-  std::cout << "Npe: " << Npe << std::endl;
-  std::cout << "n_threshold: " << n_threshold << std::endl;
-  std::cout << "scintillation decay constant: " << scintillation_decay_constant << " [ns]" << std::endl;
-  std::cout << "scintillation_risetime: " << config->scintillation_risetime << " [ns]" << std::endl;
-  std::cout << "single_photon_risetime_response: " << single_photon_risetime_response << " [ns]" << std::endl;
-  std::cout << "single_photon_decaytime_response:" << single_photon_decaytime_response << " [ns]" << std::endl;
-  std::cout << "high_pass_filter_RC: " << high_pass_filter_RC << std::endl;
-  std::cout << "DCR: " << DCR << " [GHz]" << std::endl;
+  std::cout << "NFilter: " << NFilter << std::endl;
+  std::cout << "ShapingTime: " << ShapingTime << " ns" << std::endl;
+  std::cout << "Signal-to-Noise Ratio: " << SNR << std::endl;
 
 
   PulseShape* ps;
@@ -69,31 +61,30 @@ int main ( int argc, char** argv )
   {
     if ( j % 100 == 0 )std::cout << "experiment #" << j << std::endl;
     //reset variables and objects
-    ps = new PulseShape("gauss");
-    ps->SetNpe( Npe );
-    ps->SetDCR( DCR );
-    //ps->SetSinglePhotonResponse( single_pe_risetime );//units in ns
-    ps->SetSinglePhotonRisetimeResponse( single_photon_risetime_response );
-    ps->SetSinglePhotonDecaytimeResponse( single_photon_decaytime_response );
-    ps->SetScintillationDecay( scintillation_decay_constant );//units in ns
-    ps->SetHighPassFilterRC(high_pass_filter_RC);
-    ps->NormalizeSinglePhotonResponse();
-    //std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
-    ps->NormalizeSinglePhotonResponseHighPassFilter();
-    //std::cout << ps->GetSinglePhotonResponseNormalization() << std::endl;
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
 
-    //normalize pulse shape to area = 1;
+    //create pulse shape object
+    ps = new PulseShape( ShapingTime, NFilter );
+    
+    
+    //normalize pulse shape to have pulse height at 1.0
     double normalization = 0;
-    for( int i = 0; i < int(100 / 0.01); i++ ) normalization += ps->LGADShapedPulse( i * 0.01) * 0.01;
+    for( int i = 0; i < int(100 / 0.01); i++ ) {
+      double tmp = ps->LGADShapedPulse( i * 0.01);
+      if ( tmp > normalization ) normalization = tmp;
+    }
+							
 
+    //populate the pulse shape
     for( int i = 0; i < npoints; i++ )
     {
       x[i] = x_low + double(i)*step;
       //if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
       //y[i]  = ps->Convolution(x[i], "Gauss", "RandomExp");
       y_sc[i]  = ps->LGADShapedPulse(x[i]) / normalization;
+      //y_sc[i]  = ps->NormalizedImpulseResponse(x[i]);
+
       //cout << i << " : " << y_sc[i] << "\n";
       // y_dc[i]  = ps->DarkNoise(x[i], x_low, x_high);
       y[i]     = y_sc[i];// + y_dc[i];
@@ -101,10 +92,11 @@ int main ( int argc, char** argv )
     }
     delete ps;//release memory of pulseshape object.
 
+
     double t_stamp = -999;
     for( int i = 0; i < npoints; i++ )
     {
-      if ( y[i] > n_threshold )
+      if ( y[i] > 0.15 )
       {
         t_stamp = (x[i]+x[i+1])/2.;
         break;

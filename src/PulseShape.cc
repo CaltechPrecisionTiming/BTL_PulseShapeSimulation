@@ -1,10 +1,21 @@
 #include <string>
 #include <PulseShape.hh>
 
-PulseShape::PulseShape()
+PulseShape::PulseShape( double tau, int nf)
 {
   //t_sc_random = NULL;
   //t_dc_random = NULL;
+  shapingTime_ = tau;
+  NFilter_ = nf;
+
+  //Normalize the pulse height to 1.0
+  double tmp = 0;
+  for (int i=0; i < (100 / 0.01) ; i++ ) {
+    double r = ImpulseResponse (i*0.01);
+    if (r > tmp) tmp = r;
+  }
+  ImpulseNormalization_ = tmp;
+
 };
 
 PulseShape::PulseShape( std::string function_name )
@@ -216,7 +227,7 @@ double PulseShape::LGADShapedPulse( double x )
   const int NIntegrationPoints = (integrationHigh - integrationLow) / integrationStep;
   for (int i=0; i < NIntegrationPoints; i++) {
     double s = integrationLow + i * integrationStep;
-    eval += LGADPulse(s) * ImpulseResponse(x-s) * integrationStep;
+    eval += LGADPulse(s) * NormalizedImpulseResponse(x-s) * integrationStep;
   }
   //eval = eval / (integrationHigh - integrationLow);
 
@@ -255,14 +266,26 @@ void PulseShape::NormalizeSinglePhotonResponse()
 
 double PulseShape::ImpulseResponse( double x )
 {
-  double eval = 0;
+  double eval = 0;  
+  double omegashaper = NFilter_ / shapingTime_;
   
-  //NFilter = 2; shaping time = 4ns ; x is in units of ns
-  if (x >= 0) eval = 4.61816e-1 * exp(-0.5*x)*x*x;
-  else eval = 0;
-
+  if (x>=0) {
+    eval = exp(-omegashaper*x) * pow(x,NFilter_);
+  } else {
+    eval = 0;
+  }
+  
+  //First attempt, hard coded from Mathematica notebook
+  //NFilter = 2; shaping time = 4ns ; x is in units of ns  
+  // if (x >= 0) eval = 4.61816e-1 * exp(-0.5*x)*x*x;
+  // else eval = 0;
 
   return eval;
+};
+
+double PulseShape::NormalizedImpulseResponse( double x )
+{
+  return ImpulseResponse(x) / ImpulseNormalization_;
 };
 
 double PulseShape::HighPassFilterResponse( double x )

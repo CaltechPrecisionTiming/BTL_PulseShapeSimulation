@@ -20,7 +20,7 @@ public:
   static bool _info;
   static bool _warning;
 
-  PulseShape();
+  PulseShape( double tau , int nf);
   PulseShape( std::string function_name );
   PulseShape( std::string function_name, std::string integration_method );
   ~PulseShape();
@@ -36,6 +36,7 @@ public:
   double DarkNoise( double x, double x_low, double x_high );//Dark Noise in the [x_low, x_high] region, units in ns
   double HighPassFilterResponse( double x );
   double ImpulseResponse( double x );
+  double NormalizedImpulseResponse( double x );
   bool SetSinglePhotonResponse( std::string function_name );
   bool SetIntegrationMethod(std::string integration_method );
   void SetNpe( int npe ){ Npe = npe;};
@@ -61,6 +62,12 @@ protected:
   double high_pass_filter_RC;//tau of the RC HighPassFilter (R*C) in ns
   double DCR;//dark count rate in GHz
   double single_photon_response_normalization;
+
+  //LGAD parameters
+  double shapingTime_;
+  int NFilter_;
+  double ImpulseNormalization_;
+
   std::vector<double> t_sc_random;
   std::vector<double> t_dc_random;
   const double A = 3.0;
