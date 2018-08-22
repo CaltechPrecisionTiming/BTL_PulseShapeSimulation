@@ -1,14 +1,25 @@
 #include <string>
 #include <chrono>
 #include <random>
+#include <assert.h>
 #include <PulseShape.hh>
 
-PulseShape::PulseShape( double tau, int nf)
+PulseShape::PulseShape( double tau, int nf, float SNR, int seed)
 {
   //t_sc_random = NULL;
   //t_dc_random = NULL;
   shapingTime_ = tau;
   NFilter_ = nf;
+  integrationWindowLow_ = -100;
+  integrationWindowHigh_ = 100;
+  double tmpNSteps = (integrationWindowHigh_ - integrationWindowLow_) / (shapingTime_ / 10);
+  NIntegrationPoints_ = int(tmpNSteps);
+  if (NIntegrationPoints_ != tmpNSteps) {
+    std::cout << "Error: integration window from " << integrationWindowLow_ << " to " << integrationWindowHigh_ 
+  	 << " is not divisible by shapingTime_/10 = " << (shapingTime_ / 10) 
+  	 << "\n";
+    assert(false);
+  } 
 
   //Normalize the pulse height to 1.0
   double tmp = 0;
@@ -18,10 +29,15 @@ PulseShape::PulseShape( double tau, int nf)
   }
   ImpulseNormalization_ = tmp;
 
-  //double noise[NIntegrationPoints];
-  for ( int i  = 0; i < 200; i++ )
+  //Create TRandom3 object
+  randomSeed_ = seed;
+  random_ = new TRandom3(randomSeed_);
+
+  SNR_ = SNR;
+  noise = new double[NIntegrationPoints_];
+  for ( int i  = 0; i < NIntegrationPoints_; i++ )
   {
-    noise[i] = WhiteNoise(0,1./30.);
+    noise[i] = WhiteNoise(0,1./SNR_);
   }
 
 };
@@ -108,105 +124,6 @@ bool SetIntegrationMethod(std::string integration_method )
   return true;
 };
 
-double PulseShape::ScintillationPulse( double x )
-{
-  if ( Npe <= 0 )
-  {
-    std::cerr << "[Error] Npe is zero or negative, Npe = " << Npe << std::endl;
-    exit(0);
-  }
-  if ( scintillation_decay_constant <= 0 )
-  {
-    std::cerr << "[Error] scintillation_decay_constant is zero or negative, scintillation_decay_constant = "
-              << scintillation_decay_constant << std::endl;
-    exit(0);
-  }
-  if ( single_photon_risetime_response <= 0 )
-  {
-    std::cerr << "[Error] single_photon_risetime_response is zero or negative, single_photon_risetime_response = "
-              << single_photon_risetime_response << std::endl;
-    exit(0);
-  }
-  if ( single_photon_decaytime_response <= 0 )
-  {
-    std::cerr << "[Error] single_photon_decaytime_response is zero or negative, single_photon_decaytime_response = "
-              << single_photon_decaytime_response << std::endl;
-    exit(0);
-  }
-  //if scintillation times are not yet been drawn then we draw them
-  if ( t_sc_random.size() == 0 )
-  {
-    t_sc_random.clear();
-    TRandom3 r(0);//define random variable
-    if ( _debug ) std::cout << "[DEBUG] filling vector with containing random times for SC" << std::endl;
-    for ( int i = 0; i < Npe; i++ )
-    {
-      t_sc_random.push_back( r.Exp(scintillation_decay_constant) );
-    }
-  }
-  double eval = 0;
-  //t_sc_random.at(0) = 2;
-  for ( int i = 0; i < Npe; i++ )
-  {
-    //eval += TMath::Gaus( x-t_sc_random.at(i), 0, single_photon_response_sigma);
-    //eval += 0.5*(x-t_sc_random.at(i))/1.5*exp( -(x-t_sc_random.at(i))/1.5 ) - 0.5*(x-t_sc_random.at(i))/3.*exp( -(x-t_sc_random.at(i))/3.0 );
-    if ( x-t_sc_random.at(i) >= 0 )
-    {
-      /*eval += A*((x-t_sc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_sc_random.at(i))/single_photon_risetime_response )
-              - B*(x-t_sc_random.at(i))/single_photon_decaytime_response*exp( -(x-t_sc_random.at(i))/single_photon_decaytime_response );*/
-      eval += HighPassFilterResponse(x-t_sc_random.at(i));
-    }
-  }
-
-  //return eval/single_photon_response_normalization;
-  return eval;
-};
-
-double PulseShape::DarkNoise( double x, double x_low, double x_high )//Dark Noise in the [x_low, x_high] region, units in ns
-{
-  int DC = int( DCR*(x_high-x_low) );//number of dark counts in the time window
-  //if scintillation times are not yet been drawn then we draw them
-  if ( _warning && DC == 0 )
-  {
-    std::cerr << "[WARNING] DC is zero, are you sure about this? DCR =  " << DCR << std::endl;
-  }
-  if ( single_photon_risetime_response <= 0 )
-  {
-    std::cerr << "[Error] single_photon_risetime_response is zero or negative, single_photon_risetime_response = "
-              << single_photon_risetime_response << std::endl;
-    exit(0);
-  }
-  if ( single_photon_decaytime_response <= 0 )
-  {
-    std::cerr << "[Error] single_photon_decaytime_response is zero or negative, single_photon_decaytime_response = "
-              << single_photon_decaytime_response << std::endl;
-    exit(0);
-  }
-  if ( t_dc_random.size() == 0 )
-  {
-    t_dc_random.clear();
-    TRandom3 r(0);//define random variable
-    if ( _debug ) std::cout << "[DEBUG] filling vector with random times for DC" << std::endl;
-    for ( int i = 0; i < DC; i++ )
-    {
-      t_dc_random.push_back( r.Uniform(x_low,x_high) );
-    }
-  }
-  double eval = 0;
-  for ( int i = 0; i < DC; i++ )
-  {
-    if ( x-t_dc_random.at(i) >= 0 )
-    {
-      /*eval += A*((x-t_dc_random.at(i))/single_photon_risetime_response)*exp( -(x-t_dc_random.at(i))/single_photon_risetime_response )
-            - B*((x-t_dc_random.at(i))/single_photon_decaytime_response)*exp( -(x-t_dc_random.at(i))/single_photon_decaytime_response );*/
-
-      eval += HighPassFilterResponse(x-t_dc_random.at(i));
-    }
-  }
-  return eval/single_photon_response_normalization;
-
-};
-
 
 /*
 4-point LGAD response.
@@ -232,13 +149,17 @@ double PulseShape::LGADPulse( double x )
 double PulseShape::WhiteNoise( double mean, double rms )
 {
   //x is assumed to be in units of ns
+
   // construct a trivial random generator engine from a time-based seed:
- unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
- std::default_random_engine generator (seed);
+  // unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  // std::default_random_engine generator (seed);  
+  // std::normal_distribution<double> distribution (mean, 
+  // return distribution(generator);
 
- std::normal_distribution<double> distribution (mean,rms);
+  //Use the TRandom3 version of this
+  return random_->Gaus(mean, rms);
 
-  return distribution(generator);
+
 };
 
 /*
@@ -249,28 +170,20 @@ double PulseShape::LGADShapedPulse( double x )
 {
   double eval = 0;
 
-  const double integrationStep = 1.0; //in ns
-  const double integrationLow = -100;
-  const double integrationHigh = 100;
-  const int NIntegrationPoints = (integrationHigh - integrationLow) / integrationStep;
-  // for (int i=0; i < NIntegrationPoints; i++) {
-  //   double s = integrationLow + i * integrationStep;
-  //   eval += LGADPulse(s) * NormalizedImpulseResponse(x-s) * integrationStep;
-  // }
-  //eval = eval / (integrationHigh - integrationLow);
+  const double integrationStep = (shapingTime_ / 10); //in ns
 
-  //Simpson's rule 1/3
+  //Use Simpson's rule 
   double h  = integrationStep/2.0;
-  for ( int i = 0; i < NIntegrationPoints; i++ ) {
-      double x0 = integrationLow + i*integrationStep;
-      double x2 = integrationLow + (i+1)*integrationStep;
+  for ( int i = 0; i < NIntegrationPoints_; i++ ) {
+      double x0 = integrationWindowLow_ + i*integrationStep;
+      double x2 = integrationWindowLow_ + (i+1)*integrationStep;
       double x1 = (x0+x2)/2.;
       eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0)
 			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1)
 			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2)
 			);
   }
-  //return eval/single_photon_response_normalization;
+
   return eval;
 };
 
@@ -278,60 +191,15 @@ double PulseShape::WhiteNoiseShapedPulse( double x, double mean, double rms )
 {
   double eval = 0;
 
-  const double integrationStep = 1.0; //in ns
-  const double integrationLow = -100;
-  const double integrationHigh = 100;
-  const int NIntegrationPoints = (integrationHigh - integrationLow) / integrationStep;
-  for (int i=0; i < NIntegrationPoints; i++) {
-     double s = integrationLow + i * integrationStep;
+  const double integrationStep = (shapingTime_ / 10);
+  for (int i=0; i < NIntegrationPoints_; i++) {
+     double s = integrationWindowLow_ + i * integrationStep;
      eval += noise[i] * NormalizedImpulseResponse(x-s) * integrationStep;
-     //eval += WhiteNoise(mean,rms) * NormalizedImpulseResponse(x-s) * integrationStep;
    }
-   //eval = 1.* NormalizedImpulseResponse(x-3);
-  //eval = eval / (integrationHigh - integrationLow);
 
-  //Simpson's rule 1/3
-  /*double h  = integrationStep/2.0;
-  for ( int i = 0; i < NIntegrationPoints; i++ ) {
-      double x0 = integrationLow + i*integrationStep;
-      double x2 = integrationLow + (i+1)*integrationStep;
-      double x1 = (x0+x2)/2.;
-      eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0)
-			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1)
-			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2)
-			);
-  }*/
-  //return eval/single_photon_response_normalization;
   return eval;
 };
 
-void PulseShape::NormalizeSinglePhotonResponse()
-{
-  double x_low  = .0;//ns
-  double x_high = 200;//ns
-  double step = 1e-3; //1ps
-  const int n_iterations = (x_high-x_low)/step;
-  double max_val = 0;
-  for ( int i = 0; i < n_iterations; i++ )
-  {
-    double x = x_low + double(i)*step;
-    double f_x =  A*(x/single_photon_risetime_response)*exp( -x/single_photon_risetime_response )
-                - B*(x/single_photon_decaytime_response)*exp( -x/single_photon_decaytime_response );
-    if ( f_x > max_val ) max_val = f_x;
-  }
-
-  if ( max_val > 0 )
-  {
-    single_photon_response_normalization = max_val;
-    return;
-  }
-  else
-  {
-    std::cerr << "[ERROR] single_photon_response_normalization zero or negative\nEXIT" << std::endl;
-    exit(0);
-  }
-
-};
 
 double PulseShape::ImpulseResponse( double x )
 {
@@ -344,10 +212,6 @@ double PulseShape::ImpulseResponse( double x )
     eval = 0;
   }
 
-  //First attempt, hard coded from Mathematica notebook
-  //NFilter = 2; shaping time = 4ns ; x is in units of ns
-  // if (x >= 0) eval = 4.61816e-1 * exp(-0.5*x)*x*x;
-  // else eval = 0;
 
   return eval;
 };
@@ -357,52 +221,4 @@ double PulseShape::NormalizedImpulseResponse( double x )
   return ImpulseResponse(x) / ImpulseNormalization_;
 };
 
-double PulseShape::HighPassFilterResponse( double x )
-{
-  double eval = high_pass_filter_RC*(
-                A*single_photon_risetime_response*exp(-x/single_photon_risetime_response)/pow(single_photon_risetime_response-high_pass_filter_RC,2)
-                +A*x*exp(-x/single_photon_risetime_response)/(high_pass_filter_RC*single_photon_risetime_response-pow(single_photon_risetime_response,2))
-                -B*single_photon_decaytime_response*exp(-x/single_photon_decaytime_response)/pow(single_photon_decaytime_response-high_pass_filter_RC,2)
-                -B*x*exp(-x/single_photon_decaytime_response)/(high_pass_filter_RC*single_photon_decaytime_response-pow(single_photon_decaytime_response,2))
-                +(2*(A-B)*high_pass_filter_RC*single_photon_risetime_response*single_photon_decaytime_response
-                +single_photon_risetime_response*single_photon_decaytime_response*(B*single_photon_risetime_response-A*single_photon_decaytime_response)
-                +pow(high_pass_filter_RC,2)*(B*single_photon_decaytime_response-A*single_photon_risetime_response))*
-                exp(-x/high_pass_filter_RC)/(pow(single_photon_risetime_response-high_pass_filter_RC,2)*pow(single_photon_decaytime_response-high_pass_filter_RC,2))
-              )/single_photon_response_normalization;
-  return eval;
-};
 
-void PulseShape::NormalizeSinglePhotonResponseHighPassFilter()
-{
-  double x_low  = .0;//ns
-  double x_high = 200;//ns
-  double step = 1e-3; //1ps
-  const int n_iterations = (x_high-x_low)/step;
-  double max_val = 0;
-  for ( int i = 0; i < n_iterations; i++ )
-  {
-    double x = x_low + double(i)*step;
-    double f_x =  high_pass_filter_RC*(
-                  A*single_photon_risetime_response*exp(-x/single_photon_risetime_response)/pow(single_photon_risetime_response-high_pass_filter_RC,2)
-                  +A*x*exp(-x/single_photon_risetime_response)/(high_pass_filter_RC*single_photon_risetime_response-pow(single_photon_risetime_response,2))
-                  -B*single_photon_decaytime_response*exp(-x/single_photon_decaytime_response)/pow(single_photon_decaytime_response-high_pass_filter_RC,2)
-                  -B*x*exp(-x/single_photon_decaytime_response)/(high_pass_filter_RC*single_photon_decaytime_response-pow(single_photon_decaytime_response,2))
-                  +(2*(A-B)*high_pass_filter_RC*single_photon_risetime_response*single_photon_decaytime_response
-                  +single_photon_risetime_response*single_photon_decaytime_response*(B*single_photon_risetime_response-A*single_photon_decaytime_response)
-                  +pow(high_pass_filter_RC,2)*(B*single_photon_decaytime_response-A*single_photon_risetime_response))*
-                  exp(-x/high_pass_filter_RC)/(pow(single_photon_risetime_response-high_pass_filter_RC,2)*pow(single_photon_decaytime_response-high_pass_filter_RC,2))
-                );
-    if ( f_x > max_val ) max_val = f_x;
-  }
-
-  if ( max_val > 0 )
-  {
-    single_photon_response_normalization = max_val;
-    return;
-  }
-  else
-  {
-    std::cerr << "[ERROR] HighPassFilter zerp or negative\nEXIT" << std::endl;
-    exit(0);
-  }
-};

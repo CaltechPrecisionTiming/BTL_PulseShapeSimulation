@@ -20,7 +20,7 @@ public:
   static bool _info;
   static bool _warning;
 
-  PulseShape( double tau , int nf);
+  PulseShape( double tau , int nf, float SNR, int seed);
   PulseShape( std::string function_name );
   PulseShape( std::string function_name, std::string integration_method );
   ~PulseShape();
@@ -30,16 +30,14 @@ public:
   double RandomExp( double x, double exponent );
 
   double Convolution( double x, std::string function_name1, std::string function_name2 );
-  double ScintillationPulse( double x );
+
   //ETL_ASIC PART
   double LGADPulse( double x );
   double LGADShapedPulse( double x );
   //NOISE
-  double DarkNoise( double x, double x_low, double x_high );//Dark Noise in the [x_low, x_high] region, units in ns
   double WhiteNoise(double mean, double rms);
   double WhiteNoiseShapedPulse( double x, double mean, double rms );
   //
-  double HighPassFilterResponse( double x );
   double ImpulseResponse( double x );
   double NormalizedImpulseResponse( double x );
   bool SetSinglePhotonResponse( std::string function_name );
@@ -51,8 +49,6 @@ public:
   void SetSinglePhotonDecaytimeResponse( double decaytime ){ single_photon_decaytime_response = decaytime;};//units in ns
   void SetScintillationDecay( double tau_s ){ scintillation_decay_constant = tau_s;};//units in ns
   void SetHighPassFilterRC( double rc ){ high_pass_filter_RC = rc;};
-  void NormalizeSinglePhotonResponse();
-  void NormalizeSinglePhotonResponseHighPassFilter();
   double GetSinglePhotonResponseNormalization(){return single_photon_response_normalization;};
 
 protected:
@@ -67,13 +63,22 @@ protected:
   double high_pass_filter_RC;//tau of the RC HighPassFilter (R*C) in ns
   double DCR;//dark count rate in GHz
   double single_photon_response_normalization;
-  double noise[200];
+  double *noise;
 
   //LGAD parameters
   double shapingTime_;
   int NFilter_;
   double ImpulseNormalization_;
 
+  //internal parameters 
+  float SNR_;
+  float integrationWindowLow_;
+  float integrationWindowHigh_;
+  int NIntegrationPoints_;
+  
+
+  TRandom3 *random_;
+  int randomSeed_;
   std::vector<double> t_sc_random;
   std::vector<double> t_dc_random;
   const double A = 3.0;
