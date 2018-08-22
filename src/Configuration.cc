@@ -189,6 +189,13 @@ void Configuration::parseConfigurationLine(std::string line) {
       SNR = std::stof(item);
       if( verbose ){ std::cout << "[VERBOSE] Signal-to-Noise Ratio = " << SNR << std::endl;}
     }
+    else if (line.substr(0, 10) == "randomSeed")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      randomSeed = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] Random Seed = " << randomSeed << std::endl;}
+    }
 
 }
 

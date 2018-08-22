@@ -81,8 +81,9 @@ class Configuration {
       //simulation specifics
       int NFilter = 0; 
       double ShapingTime = 4.0;
-      double SNR;
- 
+      double SNR = 30.0;
+      int randomSeed = 0;
+  
 
     private:
       // process one line of the config file
