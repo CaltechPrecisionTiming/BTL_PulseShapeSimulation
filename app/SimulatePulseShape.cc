@@ -28,7 +28,7 @@ int main ( int argc, char** argv )
   const int n_experiments = config->n_experiments;
   const double ShapingTime = config->ShapingTime;
   const double SNR = config->SNR;
-
+  const int randomSeed = config->randomSeed;
 
   std::cout << "number of experiments is: " << n_experiments << std::endl;
   std::cout << "NFilter: " << NFilter << std::endl;
@@ -50,23 +50,23 @@ int main ( int argc, char** argv )
   const int npoints  = (x_high-x_low)/step;
   std::cout << "[INFO] number of points per pulse: " << npoints << std::endl;
   std::cout << "[INFO] sampling rate is: " << step  << " ns" << std::endl;
-  double x[npoints];
-  double y[npoints], y_sc[npoints], y_dc[npoints], y_wn[npoints], y_wnps[npoints];
+  float x[npoints];
+  float y[npoints], y_signal[npoints], y_dc[npoints], y_wn[npoints], y_wnps[npoints];
   int i_evt;
   pulse->Branch("i_evt", &i_evt, "i_evt/i");
-  pulse->Branch("channel", y, Form("channel[%d]/D", npoints));
-  pulse->Branch("channel_sc", y_sc, Form("channel_sc[%d]/D", npoints));
-  pulse->Branch("channel_dc", y_dc, Form("channel_dc[%d]/D", npoints));
-  pulse->Branch("time", x, Form("time[%d]/D", npoints));
+  pulse->Branch("channel", y, Form("channel[%d]/F", npoints));
+  pulse->Branch("shapednoise", y_wnps, Form("shapednoise[%d]/F", npoints));
+  pulse->Branch("noise", y_wn, Form("noise[%d]/F", npoints));
+  pulse->Branch("time", x, Form("time[%d]/F", npoints));
   for ( int j = 0; j < n_experiments; j++ )
   {
-    if ( j % 100 == 0 )std::cout << "experiment #" << j << std::endl;
+    if ( j % 1 == 0 )std::cout << "experiment #" << j << std::endl;
     //reset variables and objects
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
 
     //create pulse shape object
-    ps = new PulseShape( ShapingTime, NFilter );
+    ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed);
 
 
     //normalize pulse shape to have pulse height at 1.0
@@ -83,14 +83,14 @@ int main ( int argc, char** argv )
       x[i] = x_low + double(i)*step;
       //if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
       //y[i]  = ps->Convolution(x[i], "Gauss", "RandomExp");
-      y_sc[i]   = ps->LGADShapedPulse(x[i]) / normalization;
+      y_signal[i]   = ps->LGADShapedPulse(x[i]) / normalization;
       y_wn[i]   = ps->WhiteNoise(0, 1./30.);
-      y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i], 0, 1./30.)/10.;
-      //y_sc[i]  = ps->NormalizedImpulseResponse(x[i]);
+      y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i], 0, 1./30.);
+      //y_signal[i]  = ps->NormalizedImpulseResponse(x[i]);
 
-      //cout << i << " : " << y_sc[i] << "\n";
+      //cout << i << " : " << y_signal[i] << "\n";
       // y_dc[i]  = ps->DarkNoise(x[i], x_low, x_high);
-      y[i]     = y_sc[i];// + y_dc[i];
+      y[i]     = y_signal[i] + y_wnps[i];// + y_dc[i];
       if( y[i] > y_max ) y_max = y[i];
     }
     delete ps;//release memory of pulseshape object.
@@ -115,7 +115,7 @@ int main ( int argc, char** argv )
 
   TFile* f = new TFile(config->output_file.c_str(), "recreate");
   total_pulse = new TGraph( npoints, x, y);
-  scintillation_pulse = new TGraph( npoints, x, y_sc);
+  scintillation_pulse = new TGraph( npoints, x, y_signal);
   dark_noise = new TGraph( npoints, x, y_dc);
   white_noise = new TGraph( npoints, x, y_wn);
   white_noise_pulse = new TGraph( npoints, x, y_wnps);
@@ -179,10 +179,10 @@ int main ( int argc, char** argv )
   write objects to TTree
   */
   pulse->Write();
-  total_pulse->Write("total_pulse");
-  scintillation_pulse->Write("scintillation_pulse");
-  dark_noise->Write("dark_noise");
-  h->Write("h");
+  // total_pulse->Write("total_pulse");
+  // scintillation_pulse->Write("scintillation_pulse");
+  // dark_noise->Write("dark_noise");
+  // h->Write("h");
   f->Close();
 
   return 0;
