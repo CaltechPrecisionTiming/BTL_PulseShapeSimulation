@@ -31,9 +31,14 @@ public:
 
   double Convolution( double x, std::string function_name1, std::string function_name2 );
   double ScintillationPulse( double x );
+  //ETL_ASIC PART
   double LGADPulse( double x );
   double LGADShapedPulse( double x );
+  //NOISE
   double DarkNoise( double x, double x_low, double x_high );//Dark Noise in the [x_low, x_high] region, units in ns
+  double WhiteNoise(double mean, double rms);
+  double WhiteNoiseShapedPulse( double x, double mean, double rms );
+  //
   double HighPassFilterResponse( double x );
   double ImpulseResponse( double x );
   double NormalizedImpulseResponse( double x );
@@ -62,6 +67,7 @@ protected:
   double high_pass_filter_RC;//tau of the RC HighPassFilter (R*C) in ns
   double DCR;//dark count rate in GHz
   double single_photon_response_normalization;
+  double noise[200];
 
   //LGAD parameters
   double shapingTime_;

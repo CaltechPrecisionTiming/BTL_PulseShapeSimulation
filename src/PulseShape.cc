@@ -1,4 +1,6 @@
 #include <string>
+#include <chrono>
+#include <random>
 #include <PulseShape.hh>
 
 PulseShape::PulseShape( double tau, int nf)
@@ -15,6 +17,12 @@ PulseShape::PulseShape( double tau, int nf)
     if (r > tmp) tmp = r;
   }
   ImpulseNormalization_ = tmp;
+
+  //double noise[NIntegrationPoints];
+  for ( int i  = 0; i < 200; i++ )
+  {
+    noise[i] = WhiteNoise(0,1./30.);
+  }
 
 };
 
@@ -221,6 +229,17 @@ double PulseShape::LGADPulse( double x )
   return eval;
 };
 
+double PulseShape::WhiteNoise( double mean, double rms )
+{
+  //x is assumed to be in units of ns
+  // construct a trivial random generator engine from a time-based seed:
+ unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+ std::default_random_engine generator (seed);
+
+ std::normal_distribution<double> distribution (mean,rms);
+
+  return distribution(generator);
+};
 
 /*
 This is the convolution using the Simpson rule, its now taking the semi-gaussian impulse ImpulseResponse
@@ -251,14 +270,40 @@ double PulseShape::LGADShapedPulse( double x )
 			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2)
 			);
   }
-
-
-
-
   //return eval/single_photon_response_normalization;
   return eval;
 };
 
+double PulseShape::WhiteNoiseShapedPulse( double x, double mean, double rms )
+{
+  double eval = 0;
+
+  const double integrationStep = 1.0; //in ns
+  const double integrationLow = -100;
+  const double integrationHigh = 100;
+  const int NIntegrationPoints = (integrationHigh - integrationLow) / integrationStep;
+  for (int i=0; i < NIntegrationPoints; i++) {
+     double s = integrationLow + i * integrationStep;
+     eval += noise[i] * NormalizedImpulseResponse(x-s) * integrationStep;
+     //eval += WhiteNoise(mean,rms) * NormalizedImpulseResponse(x-s) * integrationStep;
+   }
+   //eval = 1.* NormalizedImpulseResponse(x-3);
+  //eval = eval / (integrationHigh - integrationLow);
+
+  //Simpson's rule 1/3
+  /*double h  = integrationStep/2.0;
+  for ( int i = 0; i < NIntegrationPoints; i++ ) {
+      double x0 = integrationLow + i*integrationStep;
+      double x2 = integrationLow + (i+1)*integrationStep;
+      double x1 = (x0+x2)/2.;
+      eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0)
+			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1)
+			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2)
+			);
+  }*/
+  //return eval/single_photon_response_normalization;
+  return eval;
+};
 
 void PulseShape::NormalizeSinglePhotonResponse()
 {

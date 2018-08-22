@@ -28,7 +28,7 @@ int main ( int argc, char** argv )
   const int n_experiments = config->n_experiments;
   const double ShapingTime = config->ShapingTime;
   const double SNR = config->SNR;
-  
+
 
   std::cout << "number of experiments is: " << n_experiments << std::endl;
   std::cout << "NFilter: " << NFilter << std::endl;
@@ -40,7 +40,8 @@ int main ( int argc, char** argv )
   TGraph* total_pulse;
   TGraph* scintillation_pulse;
   TGraph* dark_noise;
-
+  TGraph* white_noise;
+  TGraph* white_noise_pulse;
 
   double step = 0.01;
   double x_low  = 0;
@@ -50,7 +51,7 @@ int main ( int argc, char** argv )
   std::cout << "[INFO] number of points per pulse: " << npoints << std::endl;
   std::cout << "[INFO] sampling rate is: " << step  << " ns" << std::endl;
   double x[npoints];
-  double y[npoints], y_sc[npoints], y_dc[npoints];
+  double y[npoints], y_sc[npoints], y_dc[npoints], y_wn[npoints], y_wnps[npoints];
   int i_evt;
   pulse->Branch("i_evt", &i_evt, "i_evt/i");
   pulse->Branch("channel", y, Form("channel[%d]/D", npoints));
@@ -66,15 +67,15 @@ int main ( int argc, char** argv )
 
     //create pulse shape object
     ps = new PulseShape( ShapingTime, NFilter );
-    
-    
+
+
     //normalize pulse shape to have pulse height at 1.0
     double normalization = 0;
     for( int i = 0; i < int(100 / 0.01); i++ ) {
       double tmp = ps->LGADShapedPulse( i * 0.01);
       if ( tmp > normalization ) normalization = tmp;
     }
-							
+
 
     //populate the pulse shape
     for( int i = 0; i < npoints; i++ )
@@ -82,7 +83,9 @@ int main ( int argc, char** argv )
       x[i] = x_low + double(i)*step;
       //if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
       //y[i]  = ps->Convolution(x[i], "Gauss", "RandomExp");
-      y_sc[i]  = ps->LGADShapedPulse(x[i]) / normalization;
+      y_sc[i]   = ps->LGADShapedPulse(x[i]) / normalization;
+      y_wn[i]   = ps->WhiteNoise(0, 1./30.);
+      y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i], 0, 1./30.)/10.;
       //y_sc[i]  = ps->NormalizedImpulseResponse(x[i]);
 
       //cout << i << " : " << y_sc[i] << "\n";
@@ -114,6 +117,11 @@ int main ( int argc, char** argv )
   total_pulse = new TGraph( npoints, x, y);
   scintillation_pulse = new TGraph( npoints, x, y_sc);
   dark_noise = new TGraph( npoints, x, y_dc);
+  white_noise = new TGraph( npoints, x, y_wn);
+  white_noise_pulse = new TGraph( npoints, x, y_wnps);
+  /*
+  plot total pulse
+  */
   TCanvas *cv = new TCanvas("Cv","Cv", 800,800);
   cv->SetLeftMargin(0.13);
   cv->SetBottomMargin(0.12);
@@ -124,10 +132,52 @@ int main ( int argc, char** argv )
   total_pulse->GetXaxis()->SetTitle("time [ns]");
   total_pulse->GetYaxis()->SetTitle("Amplitude [normalized]");
   total_pulse->GetYaxis()->SetTitleOffset(1.6);
- 
   cv->SaveAs("Convolution1.pdf");
   cv->SetLogy();
   cv->SaveAs("Convolution2.pdf");
+
+  /*
+  plot white noise
+  */
+  white_noise->SetTitle("");
+  white_noise->SetMarkerStyle(20);
+  white_noise->SetMarkerSize(0.3);
+  white_noise->SetMarkerColor(kBlue);
+  white_noise->SetLineColor(kBlue);
+  white_noise->Draw("APL");
+  white_noise->GetXaxis()->SetTitle("time [ns]");
+  white_noise->GetYaxis()->SetTitle("Amplitude [normalized]");
+  white_noise->GetYaxis()->SetTitleOffset(1.6);
+  white_noise->GetYaxis()->SetRangeUser(-0.3,0.3);
+  white_noise->GetXaxis()->SetRangeUser(0,10);
+  cv->SetLogy(0);
+  cv->SaveAs("WhiteNoise1.pdf");
+
+  /*
+  plot white noise shaped
+  */
+  white_noise_pulse->SetTitle("");
+  white_noise_pulse->SetMarkerStyle(20);
+  white_noise_pulse->SetMarkerSize(0.3);
+  white_noise_pulse->SetMarkerColor(kBlue);
+  white_noise_pulse->SetLineColor(kBlue);
+  total_pulse->SetMarkerStyle(20);
+  total_pulse->SetMarkerSize(0.3);
+  total_pulse->SetMarkerColor(kRed);
+  total_pulse->SetLineColor(kRed);
+  white_noise_pulse->Draw("APL");
+  total_pulse->Draw("PL");
+  white_noise_pulse->GetXaxis()->SetTitle("time [ns]");
+  white_noise_pulse->GetYaxis()->SetTitle("Amplitude [normalized]");
+  white_noise_pulse->GetYaxis()->SetTitleOffset(1.6);
+  white_noise_pulse->GetYaxis()->SetRangeUser(-0.1,1.1);
+  white_noise_pulse->GetXaxis()->SetRangeUser(0,50);
+  cv->SetLogy(0);
+  cv->SaveAs("WhiteNoiseShaped1.pdf");
+
+  /*
+  write objects to TTree
+  */
   pulse->Write();
   total_pulse->Write("total_pulse");
   scintillation_pulse->Write("scintillation_pulse");
