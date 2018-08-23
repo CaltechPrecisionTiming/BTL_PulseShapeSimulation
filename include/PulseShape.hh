@@ -11,6 +11,8 @@
 #include <TMath.h>
 #include <TGraph.h>
 #include <TString.h>
+#include <TTree.h>
+#include <vector>
 
 class PulseShape
 {
@@ -21,6 +23,7 @@ public:
   static bool _warning;
 
   PulseShape( double tau , int nf, float SNR, int seed);
+  PulseShape( double tau , int nf, float SNR, int seed, std::vector<std::vector<std::pair<double,double> > > &LGADPulseLibrary);
   PulseShape( std::string function_name );
   PulseShape( std::string function_name, std::string integration_method );
   ~PulseShape();
@@ -64,8 +67,10 @@ protected:
   double DCR;//dark count rate in GHz
   double single_photon_response_normalization;
   double *noise;
+  double *LGADSignal;
 
   //LGAD parameters
+  bool useLGADLibrary_;
   double shapingTime_;
   int NFilter_;
   double ImpulseNormalization_;
@@ -76,9 +81,12 @@ protected:
   float integrationWindowHigh_;
   int NIntegrationPoints_;
   
+  int NIntegrationPointsLGADSignal_;
+  float IntegralTimeStepSignal_;
 
   TRandom3 *random_;
   int randomSeed_;
+  int randomSignalEvent_;
   std::vector<double> t_sc_random;
   std::vector<double> t_dc_random;
   const double A = 3.0;

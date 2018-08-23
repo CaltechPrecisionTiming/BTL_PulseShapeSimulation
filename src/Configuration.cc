@@ -196,6 +196,13 @@ void Configuration::parseConfigurationLine(std::string line) {
       randomSeed = std::stof(item);
       if( verbose ){ std::cout << "[VERBOSE] Random Seed = " << randomSeed << std::endl;}
     }
+    else if (line.substr(0, 18) == "LGADSignalFilename")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      LGADSignalFilename = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] LGADSignalFilename = " << LGADSignalFilename << std::endl;}
+    }
 
 }
 

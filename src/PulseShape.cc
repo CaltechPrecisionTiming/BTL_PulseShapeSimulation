@@ -4,6 +4,79 @@
 #include <assert.h>
 #include <PulseShape.hh>
 
+PulseShape::PulseShape( double tau, int nf, float SNR, int seed, std::vector<std::vector<std::pair<double,double> > > &LGADPulseLibrary)
+{
+  //t_sc_random = NULL;
+  //t_dc_random = NULL;
+  shapingTime_ = tau;
+  NFilter_ = nf;
+  integrationWindowLow_ = -100;
+  integrationWindowHigh_ = 100;
+  double tmpNSteps = (integrationWindowHigh_ - integrationWindowLow_) / (shapingTime_ / 10);
+  NIntegrationPoints_ = int(tmpNSteps);
+  if (NIntegrationPoints_ != tmpNSteps) {
+    std::cout << "Error: integration window from " << integrationWindowLow_ << " to " << integrationWindowHigh_ 
+  	 << " is not divisible by shapingTime_/10 = " << (shapingTime_ / 10) 
+  	 << "\n";
+    assert(false);
+  } 
+
+
+
+  //Normalize the pulse height to 1.0
+  double tmp = 0;
+  for (int i=0; i < (100 / 0.01) ; i++ ) {
+    double r = ImpulseResponse (i*0.01);
+    if (r > tmp) tmp = r;
+  }
+  ImpulseNormalization_ = tmp;
+
+  //Create TRandom3 object
+  randomSeed_ = seed;
+  random_ = new TRandom3(randomSeed_);
+
+  //**********************************************
+  //Randomly pick a signal pulse from the library
+  //**********************************************
+  useLGADLibrary_ = true;
+  randomSignalEvent_ = random_->Integer(LGADPulseLibrary.size());
+  const int npoints = 1500;
+  IntegralTimeStepSignal_ = shapingTime_ / 100;
+
+  double tmpNStepsLGADSignal = (integrationWindowHigh_ - integrationWindowLow_) / IntegralTimeStepSignal_;
+  NIntegrationPointsLGADSignal_ = int(tmpNStepsLGADSignal);
+  if (NIntegrationPointsLGADSignal_ != tmpNStepsLGADSignal) {
+    std::cout << "Error: integration window from " << integrationWindowLow_ << " to " << integrationWindowHigh_ 
+	      << " is not divisible by shapingTime_/10 = " << IntegralTimeStepSignal_
+	      << "\n";
+    assert(false);
+  } 
+  LGADSignal = new double[NIntegrationPointsLGADSignal_];
+
+  std::cout << "randomSignalEvent_ : " << randomSignalEvent_ << " \n";
+  for ( int i  = 0; i < NIntegrationPointsLGADSignal_; i++ ) {
+    int tmpSignalPulseIndex =  i*(1000 * IntegralTimeStepSignal_);
+    if (tmpSignalPulseIndex < 1500) {
+      LGADSignal[i] = LGADPulseLibrary[randomSignalEvent_][tmpSignalPulseIndex].second;
+    } else {
+      LGADSignal[i] = 0;
+    }
+    std::cout << i << " : " << tmpSignalPulseIndex << " -> " << LGADSignal[i] << "\n";
+  }
+  
+
+  //****************************
+  //Simulate the Noise
+  //****************************
+  SNR_ = SNR;
+  noise = new double[NIntegrationPoints_];
+  for ( int i  = 0; i < NIntegrationPoints_; i++ )
+  {
+    noise[i] = WhiteNoise(0,1./SNR_);
+  }
+
+};
+
 PulseShape::PulseShape( double tau, int nf, float SNR, int seed)
 {
   //t_sc_random = NULL;
@@ -41,6 +114,7 @@ PulseShape::PulseShape( double tau, int nf, float SNR, int seed)
   }
 
 };
+
 
 PulseShape::PulseShape( std::string function_name )
 {
@@ -133,12 +207,19 @@ double PulseShape::LGADPulse( double x )
 {
   //x is assumed to be in units of ns
   double eval = 0;
-
-  //4-point signal from Gregory Deptuch
-  if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
-  else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
-  else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
-  else eval = 0;
+  if (useLGADLibrary_) {
+    if (x < 0 || x > 1.5) eval = 0;
+    else {
+      int tmpSignalIndex = int ( std::round ( x / IntegralTimeStepSignal_ ));
+      eval = LGADSignal[tmpSignalIndex];
+    }
+  } else {    
+    //4-point signal from Gregory Deptuch
+    if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
+    else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
+    else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
+    else eval = 0;
+  }
 
   //Delta Function
   //if (x==0) eval = 1;
