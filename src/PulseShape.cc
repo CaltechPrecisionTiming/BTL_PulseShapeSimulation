@@ -53,7 +53,7 @@ PulseShape::PulseShape( double tau, int nf, float SNR, int seed, std::vector<std
   } 
   LGADSignal = new double[NIntegrationPointsLGADSignal_];
 
-  std::cout << "randomSignalEvent_ : " << randomSignalEvent_ << " \n";
+  //std::cout << "randomSignalEvent_ : " << randomSignalEvent_ << " \n";
   for ( int i  = 0; i < NIntegrationPointsLGADSignal_; i++ ) {
     int tmpSignalPulseIndex =  i*(1000 * IntegralTimeStepSignal_);
     if (tmpSignalPulseIndex < 1500) {
@@ -61,7 +61,7 @@ PulseShape::PulseShape( double tau, int nf, float SNR, int seed, std::vector<std
     } else {
       LGADSignal[i] = 0;
     }
-    std::cout << i << " : " << tmpSignalPulseIndex << " -> " << LGADSignal[i] << "\n";
+    //std::cout << i << " : " << tmpSignalPulseIndex << " -> " << LGADSignal[i] << "\n";
   }
   
 
