@@ -91,23 +91,28 @@ int main ( int argc, char** argv )
   pulse->Branch("time", x, Form("time[%d]/F", npoints));
   for ( int j = 0; j < n_experiments; j++ )
   {
-    if ( j % 1 == 0 )std::cout << "experiment #" << j << std::endl;
+    if ( j % 1 == 0 )std::cout << "Generating Event #" << j << std::endl;
     //reset variables and objects
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
 
     //create pulse shape object
-    // ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed, LGADSignalLibrary );
-    ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed );
+    ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed+j, LGADSignalLibrary );
+    //ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed );
     
+    //std::cout << "here1\n";
 
     //normalize pulse shape to have pulse height at 1.0
     double normalization = 0;
     for( int i = 0; i < int(100 / 0.01); i++ ) {
+      //std::cout << "norm " << i << " ";
       double tmp = ps->LGADShapedPulse( i * 0.01);
+      //std::cout << tmp << "\n";
       if ( tmp > normalization ) normalization = tmp;
     }
 
+    
+    //std::cout << "here2\n";
 
     //populate the pulse shape
     for( int i = 0; i < npoints; i++ )

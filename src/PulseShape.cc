@@ -207,12 +207,18 @@ double PulseShape::LGADPulse( double x )
 {
   //x is assumed to be in units of ns
   double eval = 0;
+  //std::cout << "LGADPulse " << useLGADLibrary_ << "\n";
   if (useLGADLibrary_) {
-    if (x < 0 || x > 1.5) eval = 0;
+    //std::cout << "Pulse " << x ;
+    if (x < 0 || x > 1.5) {
+      eval = 0;
+    }
     else {
       int tmpSignalIndex = int ( std::round ( x / IntegralTimeStepSignal_ ));
+      //std::cout << x / IntegralTimeStepSignal_ << " " << int ( std::round ( x / IntegralTimeStepSignal_ )) ;
       eval = LGADSignal[tmpSignalIndex];
     }
+    //std::cout << " ; \n";
   } else {    
     //4-point signal from Gregory Deptuch
     if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
@@ -255,10 +261,12 @@ double PulseShape::LGADShapedPulse( double x )
 
   //Use Simpson's rule 
   double h  = integrationStep/2.0;
-  for ( int i = 0; i < NIntegrationPoints_; i++ ) {
+  //std::cout << "LGADShapedPulse " << NIntegrationPoints_ << "\n";
+  for ( int i = 0; i < NIntegrationPoints_; i++ ) {    
       double x0 = integrationWindowLow_ + i*integrationStep;
       double x2 = integrationWindowLow_ + (i+1)*integrationStep;
       double x1 = (x0+x2)/2.;
+      //std::cout << "integral " << i << " : " << x0 << " " << x1 << " " << x2 << " : " << LGADPulse(x0) << "\n";
       eval += (h/3.)*( LGADPulse(x0)*NormalizedImpulseResponse(x-x0)
 			+ 4.0 * LGADPulse(x1)*NormalizedImpulseResponse(x-x1)
 			+ LGADPulse(x2)*NormalizedImpulseResponse(x-x2)
