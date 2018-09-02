@@ -81,6 +81,7 @@ PulseShape::PulseShape( double tau, int nf, float SNR, int seed)
 {
   //t_sc_random = NULL;
   //t_dc_random = NULL;
+  useLGADLibrary_ = false;
   shapingTime_ = tau;
   NFilter_ = nf;
   integrationWindowLow_ = -100;
@@ -205,30 +206,32 @@ Need to promote this to Nicolo's code
 */
 double PulseShape::LGADPulse( double x )
 {
-  //x is assumed to be in units of ns
-  double eval = 0;
+  const double timeShift = 20;
+  double t = x - timeShift;
+  //t is assumed to be in units of ns
+  double eval = 0;  
   //std::cout << "LGADPulse " << useLGADLibrary_ << "\n";
   if (useLGADLibrary_) {
-    //std::cout << "Pulse " << x ;
-    if (x < 0 || x > 1.5) {
+    //std::cout << "Pulse " << t ;
+    if (t < 0 || t > 1.5) {
       eval = 0;
     }
     else {
-      int tmpSignalIndex = int ( std::round ( x / IntegralTimeStepSignal_ ));
-      //std::cout << x / IntegralTimeStepSignal_ << " " << int ( std::round ( x / IntegralTimeStepSignal_ )) ;
+      int tmpSignalIndex = int ( std::round ( t / IntegralTimeStepSignal_ ));
+      //std::cout << t / IntegralTimeStepSignal_ << " " << int ( std::round ( t / IntegralTimeStepSignal_ )) ;
       eval = LGADSignal[tmpSignalIndex];
     }
     //std::cout << " ; \n";
   } else {    
     //4-point signal from Gregory Deptuch
-    if (x >= 0 && x<0.2) eval = (0.8 / 0.2) * x ;
-    else if (x >= 0.2 && x<0.7) eval = 0.8 - (0.1 / 0.5)*(x - 0.2);
-    else if (x>=0.7 && x < 1.5) eval = 0.7 - (0.7 / 0.8)*(x - 0.7);
+    if (t >= 0 && t<0.2) eval = (0.8 / 0.2) * t ;
+    else if (t >= 0.2 && t<0.7) eval = 0.8 - (0.1 / 0.5)*(t - 0.2);
+    else if (t>=0.7 && t < 1.5) eval = 0.7 - (0.7 / 0.8)*(t - 0.7);
     else eval = 0;
   }
 
   //Delta Function
-  //if (x==0) eval = 1;
+  //if (t==0) eval = 1;
 
   return eval;
 };
@@ -292,11 +295,12 @@ double PulseShape::WhiteNoiseShapedPulse( double x, double mean, double rms )
 
 double PulseShape::ImpulseResponse( double x )
 {
+  const double timeShift = 0.0;
   double eval = 0;
   double omegashaper = NFilter_ / shapingTime_;
 
   if (x>=0) {
-    eval = exp(-omegashaper*x) * pow(x,NFilter_);
+    eval = exp(-omegashaper*(x-timeShift)) * pow(x-timeShift,NFilter_);
   } else {
     eval = 0;
   }

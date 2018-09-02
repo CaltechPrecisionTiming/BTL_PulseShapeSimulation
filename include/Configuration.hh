@@ -83,7 +83,7 @@ class Configuration {
       double ShapingTime = 4.0;
       double SNR = 30.0;
       int randomSeed = 0;
-      string LGADSignalFilename = "/afs/cern.ch/work/s/sixie/public/releases/run2/Timing/CMSSW_9_0_2/src/BTL_PulseShapeSimulation/LGADPulses_55micron_Gain15.root";
+      string LGADSignalFilename = "";
 
     private:
       // process one line of the config file

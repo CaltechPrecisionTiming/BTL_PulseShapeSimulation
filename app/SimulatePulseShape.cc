@@ -31,32 +31,41 @@ int main ( int argc, char** argv )
   const double ShapingTime = config->ShapingTime;
   const double SNR = config->SNR;
   const int randomSeed = config->randomSeed;
-  const string LGADSignalFilename = config->LGADSignalFilename;
-  TFile *LGADSignalFile = new TFile(LGADSignalFilename.c_str(),"READ");
-  if (!LGADSignalFile) { cout << "Error: LGAD Signal File " << LGADSignalFilename << " was not opened successfully. \n"; assert(false);}
-  TTree *LGADSignalTree = (TTree*)LGADSignalFile->Get("pulse");
-  assert(LGADSignalTree);
-
+  string LGADSignalFilename = config->LGADSignalFilename;
+  
+  bool useLGADPulseLibrary = false;
+  TFile *LGADSignalFile = 0;
+  TTree *LGADSignalTree = 0;
+  if (LGADSignalFilename != "") {
+    LGADSignalFile = new TFile(LGADSignalFilename.c_str(),"READ");
+    if (!LGADSignalFile) { cout << "Error: LGAD Signal File " << LGADSignalFilename << " was not opened successfully. \n"; assert(false);}
+    LGADSignalTree = (TTree*)LGADSignalFile->Get("pulse");
+    assert(LGADSignalTree);
+    useLGADPulseLibrary = true;
+  }
+  
   //******************************************************************
   //Load the LGAD Signal Pulses into memory
   //******************************************************************
-  std::cout << "Loading LGAD Signal Pulses into memory from : " << LGADSignalFilename << "\n";
   std::vector<std::vector< std::pair<double,double > > > LGADSignalLibrary;
-  const int npointsSignal = 1500;
-  float tmpTime[npointsSignal];
-  float tmpAmp[npointsSignal];
-  LGADSignalTree->SetBranchAddress("time",&tmpTime);
-  LGADSignalTree->SetBranchAddress("channel",&tmpAmp);
-  for( int i=0; i < LGADSignalTree->GetEntries();i++) {
-    cout << "reading signal event: " << i << "\n";
-    std::vector< std::pair <double,double > > pulse;    
-    LGADSignalTree->GetEntry(i);
-    for (int j=0; j < npointsSignal; j++) {
-      pulse.push_back( std::pair<double,double>( tmpTime[j] , tmpAmp[j] ));
+  if (useLGADPulseLibrary) {
+    std::cout << "Loading LGAD Signal Pulses into memory from : " << LGADSignalFilename << "\n";
+    const int npointsSignal = 1500;
+    float tmpTime[npointsSignal];
+    float tmpAmp[npointsSignal];
+    LGADSignalTree->SetBranchAddress("time",&tmpTime);
+    LGADSignalTree->SetBranchAddress("channel",&tmpAmp);
+    for( int i=0; i < LGADSignalTree->GetEntries();i++) {
+      cout << "reading signal event: " << i << "\n";
+      std::vector< std::pair <double,double > > pulse;    
+      LGADSignalTree->GetEntry(i);
+      for (int j=0; j < npointsSignal; j++) {
+	pulse.push_back( std::pair<double,double>( tmpTime[j] , tmpAmp[j] ));
+      }
+      LGADSignalLibrary.push_back(pulse);
     }
-    LGADSignalLibrary.push_back(pulse);
+    LGADSignalFile->Close();
   }
-  LGADSignalFile->Close();
 
   std::cout << "number of experiments is: " << n_experiments << std::endl;
   std::cout << "NFilter: " << NFilter << std::endl;
@@ -97,11 +106,9 @@ int main ( int argc, char** argv )
     double y_max = 0;
 
     //create pulse shape object
-    ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed+j, LGADSignalLibrary );
-    //ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed );
+    if (useLGADPulseLibrary) ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed+j, LGADSignalLibrary );
+    else ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed+j );
     
-    //std::cout << "here1\n";
-
     //normalize pulse shape to have pulse height at 1.0
     double normalization = 0;
     for( int i = 0; i < int(100 / 0.01); i++ ) {

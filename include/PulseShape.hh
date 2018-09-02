@@ -70,7 +70,7 @@ protected:
   double *LGADSignal;
 
   //LGAD parameters
-  bool useLGADLibrary_;
+  bool useLGADLibrary_ = false;
   double shapingTime_;
   int NFilter_;
   double ImpulseNormalization_;

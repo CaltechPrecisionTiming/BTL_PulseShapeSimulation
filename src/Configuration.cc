@@ -200,7 +200,7 @@ void Configuration::parseConfigurationLine(std::string line) {
     {
       nextConfigurationElement(ss, item);
       nextConfigurationElement(ss, item);
-      LGADSignalFilename = std::stof(item);
+      LGADSignalFilename = item;
       if( verbose ){ std::cout << "[VERBOSE] LGADSignalFilename = " << LGADSignalFilename << std::endl;}
     }
 
