@@ -32,7 +32,16 @@ if __name__ == '__main__':
 		"LGADPulseLibrary_W6_55micron_Gain10_1E15_550V.root" : "W6_55MicronGain10_1E15_550V",
 		"LGADPulseLibrary_W6_55micron_Gain4_3E15_700V.root" : "W6_55MicronGain4_3E15_700V",
                 }  
-    
+    LGADPulseLibrarySignalAmplitudeMean = {
+        "" : 1.0,
+        "LGADPulseLibrary_35micron_Gain15_Prerad.root" : 0.484e-3,
+        "LGADPulseLibrary_55micron_Gain15_Prerad.root" :  0.564e-3,
+        "LGADPulseLibrary_75micron_Gain15_Prerad.root" :  0.563e-3,
+        "LGADPulseLibrary_W6_55micron_Gain16_5E14_480V.root" :  0.701e-3,
+        "LGADPulseLibrary_W6_55micron_Gain10_1E15_550V.root" :  0.379e-3,
+        "LGADPulseLibrary_W6_55micron_Gain4_3E15_700V.root" :  0.148e-3,
+        }  
+  
 
     for shapingTime in shapingTimeOptions:
         for SNR in SNROptions:
@@ -43,6 +52,7 @@ if __name__ == '__main__':
                 f.write("NFilter 2 \n")
                 f.write("ShapingTime "+str(shapingTime)+"\n")
                 f.write("SNR "+str(SNR)+"\n")
+                f.write("SignalAmplitudeMean "+str(LGADPulseLibrarySignalAmplitudeMean[LGADPulseFile])+"\n")
                 f.write("randomSeed 1\n")
                 if (LGADPulseFile != ""):
                     f.write("LGADSignalFilename /afs/cern.ch/work/s/sixie/public/releases/run2/Timing/CMSSW_9_0_2/src/BTL_PulseShapeSimulation/LGADPulseLibrary/" + LGADPulseFile + "\n")

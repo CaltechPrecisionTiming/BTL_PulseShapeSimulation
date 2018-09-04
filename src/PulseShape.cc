@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <PulseShape.hh>
 
-PulseShape::PulseShape( double tau, int nf, float SNR, int seed, std::vector<std::vector<std::pair<double,double> > > &LGADPulseLibrary)
+PulseShape::PulseShape( double tau, int nf, float NoiseRMS, int seed, std::vector<std::vector<std::pair<double,double> > > &LGADPulseLibrary)
 {
   //t_sc_random = NULL;
   //t_dc_random = NULL;
@@ -68,16 +68,15 @@ PulseShape::PulseShape( double tau, int nf, float SNR, int seed, std::vector<std
   //****************************
   //Simulate the Noise
   //****************************
-  SNR_ = SNR;
   noise = new double[NIntegrationPoints_];
   for ( int i  = 0; i < NIntegrationPoints_; i++ )
   {
-    noise[i] = WhiteNoise(0,1./SNR_);
+    noise[i] = WhiteNoise(0,NoiseRMS);
   }
 
 };
 
-PulseShape::PulseShape( double tau, int nf, float SNR, int seed)
+PulseShape::PulseShape( double tau, int nf, float NoiseRMS, int seed)
 {
   //t_sc_random = NULL;
   //t_dc_random = NULL;
@@ -107,11 +106,10 @@ PulseShape::PulseShape( double tau, int nf, float SNR, int seed)
   randomSeed_ = seed;
   random_ = new TRandom3(randomSeed_);
 
-  SNR_ = SNR;
   noise = new double[NIntegrationPoints_];
   for ( int i  = 0; i < NIntegrationPoints_; i++ )
   {
-    noise[i] = WhiteNoise(0,1./SNR_);
+    noise[i] = WhiteNoise(0,NoiseRMS);
   }
 
 };
@@ -279,7 +277,7 @@ double PulseShape::LGADShapedPulse( double x )
   return eval;
 };
 
-double PulseShape::WhiteNoiseShapedPulse( double x, double mean, double rms )
+double PulseShape::WhiteNoiseShapedPulse( double x )
 {
   double eval = 0;
 

@@ -30,6 +30,8 @@ int main ( int argc, char** argv )
   const int n_experiments = config->n_experiments;
   const double ShapingTime = config->ShapingTime;
   const double SNR = config->SNR;
+  const double SignalAmplitudeMean = config->SignalAmplitudeMean;
+  const double NoiseRMS = SignalAmplitudeMean / SNR;
   const int randomSeed = config->randomSeed;
   string LGADSignalFilename = config->LGADSignalFilename;
   
@@ -51,6 +53,7 @@ int main ( int argc, char** argv )
   if (useLGADPulseLibrary) {
     std::cout << "Loading LGAD Signal Pulses into memory from : " << LGADSignalFilename << "\n";
     const int npointsSignal = 1500;
+    const double impedance = 50; //use 50 Ohm impedance
     float tmpTime[npointsSignal];
     float tmpAmp[npointsSignal];
     LGADSignalTree->SetBranchAddress("time",&tmpTime);
@@ -60,7 +63,7 @@ int main ( int argc, char** argv )
       std::vector< std::pair <double,double > > pulse;    
       LGADSignalTree->GetEntry(i);
       for (int j=0; j < npointsSignal; j++) {
-	pulse.push_back( std::pair<double,double>( tmpTime[j] , tmpAmp[j] ));
+	pulse.push_back( std::pair<double,double>( tmpTime[j] , impedance * tmpAmp[j] ));
       }
       LGADSignalLibrary.push_back(pulse);
     }
@@ -71,6 +74,8 @@ int main ( int argc, char** argv )
   std::cout << "NFilter: " << NFilter << std::endl;
   std::cout << "ShapingTime: " << ShapingTime << " ns" << std::endl;
   std::cout << "Signal-to-Noise Ratio: " << SNR << std::endl;
+  std::cout << "SignalAmplitudeMean: " << SignalAmplitudeMean << std::endl;
+  std::cout << "NoiseRMS: " << NoiseRMS << std::endl;
 
 
   //******************************************************************
@@ -96,7 +101,6 @@ int main ( int argc, char** argv )
   pulse->Branch("i_evt", &i_evt, "i_evt/i");
   pulse->Branch("channel", y, Form("channel[%d]/F", npoints));
   pulse->Branch("shapednoise", y_wnps, Form("shapednoise[%d]/F", npoints));
-  pulse->Branch("noise", y_wn, Form("noise[%d]/F", npoints));
   pulse->Branch("time", x, Form("time[%d]/F", npoints));
   for ( int j = 0; j < n_experiments; j++ )
   {
@@ -106,34 +110,30 @@ int main ( int argc, char** argv )
     double y_max = 0;
 
     //create pulse shape object
-    if (useLGADPulseLibrary) ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed+j, LGADSignalLibrary );
-    else ps = new PulseShape( ShapingTime, NFilter , SNR, randomSeed+j );
-    
-    //normalize pulse shape to have pulse height at 1.0
     double normalization = 0;
-    for( int i = 0; i < int(100 / 0.01); i++ ) {
-      //std::cout << "norm " << i << " ";
-      double tmp = ps->LGADShapedPulse( i * 0.01);
-      //std::cout << tmp << "\n";
-      if ( tmp > normalization ) normalization = tmp;
+    if (useLGADPulseLibrary) {
+      ps = new PulseShape( ShapingTime, NFilter , NoiseRMS, randomSeed+j, LGADSignalLibrary );
+      normalization = 1; //don't do normalization for this case
+    } else {
+      ps = new PulseShape( ShapingTime, NFilter , NoiseRMS, randomSeed+j );
+
+      //normalize pulse shape to have pulse height at 1.0V
+      for( int i = 0; i < int(100 / 0.01); i++ ) {
+	//std::cout << "norm " << i << " ";
+	double tmp = ps->LGADShapedPulse( i * 0.01);
+	//std::cout << tmp << "\n";
+	if ( tmp > normalization ) normalization = tmp;
+      }     
     }
-
     
-    //std::cout << "here2\n";
-
     //populate the pulse shape
     for( int i = 0; i < npoints; i++ )
     {
       x[i] = x_low + double(i)*step;
       //if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
-      //y[i]  = ps->Convolution(x[i], "Gauss", "RandomExp");
       y_signal[i]   = ps->LGADShapedPulse(x[i]) / normalization;
-      y_wn[i]   = ps->WhiteNoise(0, 1./30.);
-      y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i], 0, 1./30.);
-      //y_signal[i]  = ps->NormalizedImpulseResponse(x[i]);
-
+      y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i]);
       //cout << i << " : " << y_signal[i] << "\n";
-      // y_dc[i]  = ps->DarkNoise(x[i], x_low, x_high);
       y[i]     = y_signal[i] + y_wnps[i];// + y_dc[i];
       if( y[i] > y_max ) y_max = y[i];
     }

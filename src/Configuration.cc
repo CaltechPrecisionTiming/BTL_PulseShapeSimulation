@@ -203,6 +203,13 @@ void Configuration::parseConfigurationLine(std::string line) {
       LGADSignalFilename = item;
       if( verbose ){ std::cout << "[VERBOSE] LGADSignalFilename = " << LGADSignalFilename << std::endl;}
     }
+    else if (line.substr(0, 19) == "SignalAmplitudeMean")
+    {
+      nextConfigurationElement(ss, item);
+      nextConfigurationElement(ss, item);
+      SignalAmplitudeMean = std::stof(item);
+      if( verbose ){ std::cout << "[VERBOSE] SignalAmplitudeMean = " << SignalAmplitudeMean << std::endl;}
+    }
 
 }
 

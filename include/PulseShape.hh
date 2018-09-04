@@ -22,8 +22,8 @@ public:
   static bool _info;
   static bool _warning;
 
-  PulseShape( double tau , int nf, float SNR, int seed);
-  PulseShape( double tau , int nf, float SNR, int seed, std::vector<std::vector<std::pair<double,double> > > &LGADPulseLibrary);
+  PulseShape( double tau , int nf, float NoiseRMS, int seed);
+  PulseShape( double tau , int nf, float NoiseRMS, int seed, std::vector<std::vector<std::pair<double,double> > > &LGADPulseLibrary);
   PulseShape( std::string function_name );
   PulseShape( std::string function_name, std::string integration_method );
   ~PulseShape();
@@ -39,7 +39,7 @@ public:
   double LGADShapedPulse( double x );
   //NOISE
   double WhiteNoise(double mean, double rms);
-  double WhiteNoiseShapedPulse( double x, double mean, double rms );
+  double WhiteNoiseShapedPulse( double x );
   //
   double ImpulseResponse( double x );
   double NormalizedImpulseResponse( double x );
@@ -76,7 +76,6 @@ protected:
   double ImpulseNormalization_;
 
   //internal parameters 
-  float SNR_;
   float integrationWindowLow_;
   float integrationWindowHigh_;
   int NIntegrationPoints_;
