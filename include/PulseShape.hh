@@ -75,6 +75,17 @@ protected:
   int NFilter_;
   double ImpulseNormalization_;
 
+  //4-point signal from Gregory Deptuch
+  double random_p1_time = 0;
+  double random_p2_time = 0;
+  double random_p3_time = 0;
+  double random_p4_time = 0;
+  double random_p1_amp = 0;
+  double random_p2_amp = 0;
+  double random_p3_amp = 0;
+  
+
+
   //internal parameters 
   float integrationWindowLow_;
   float integrationWindowHigh_;

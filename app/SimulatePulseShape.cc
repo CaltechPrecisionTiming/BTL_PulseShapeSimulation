@@ -34,7 +34,8 @@ int main ( int argc, char** argv )
   const double NoiseRMS = SignalAmplitudeMean / SNR;
   const int randomSeed = config->randomSeed;
   string LGADSignalFilename = config->LGADSignalFilename;
-  
+  TRandom3 *random = new TRandom3(randomSeed);
+
   bool useLGADPulseLibrary = false;
   TFile *LGADSignalFile = 0;
   TTree *LGADSignalTree = 0;
@@ -124,17 +125,21 @@ int main ( int argc, char** argv )
 	//std::cout << tmp << "\n";
 	if ( tmp > normalization ) normalization = tmp;
       }     
+      
+      //introduce a 20% fluctuation on the normalization
+      normalization = normalization / (1.0 + random->Gaus(0,0.2));
+      
     }
     
     //populate the pulse shape
     for( int i = 0; i < npoints; i++ )
     {
       x[i] = x_low + double(i)*step;
-      //if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
-      y_signal[i]   = ps->LGADShapedPulse(x[i]) / normalization;
+      ////if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
+      y_signal[i]   =  ps->LGADShapedPulse(x[i]) / normalization;      
       y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i]);
       //cout << i << " : " << y_signal[i] << "\n";
-      y[i]     = y_signal[i] + y_wnps[i];// + y_dc[i];
+      y[i]     = y_signal[i] + y_wnps[i];// + y_dc[i];      
       if( y[i] > y_max ) y_max = y[i];
     }
     delete ps;//release memory of pulseshape object.

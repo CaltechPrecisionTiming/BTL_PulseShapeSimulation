@@ -74,6 +74,7 @@ PulseShape::PulseShape( double tau, int nf, float NoiseRMS, int seed, std::vecto
     noise[i] = WhiteNoise(0,NoiseRMS);
   }
 
+ 
 };
 
 PulseShape::PulseShape( double tau, int nf, float NoiseRMS, int seed)
@@ -111,6 +112,18 @@ PulseShape::PulseShape( double tau, int nf, float NoiseRMS, int seed)
   {
     noise[i] = WhiteNoise(0,NoiseRMS);
   }
+
+  //****************************
+  //Simulate the Noise
+  //****************************
+  random_p1_time = random_->Gaus(0, 0.1);
+  random_p2_time = random_->Gaus(0, 0.1);
+  random_p3_time = random_->Gaus(0, 0.1);
+  random_p4_time = random_->Gaus(0, 0.1);
+  random_p1_amp = random_->Gaus(0, 0.1);
+  random_p2_amp = random_->Gaus(0, 0.1);
+  random_p3_amp = random_->Gaus(0, 0.1);
+  std::cout << "random: " << random_p1_time << "\n";
 
 };
 
@@ -222,10 +235,28 @@ double PulseShape::LGADPulse( double x )
     //std::cout << " ; \n";
   } else {    
     //4-point signal from Gregory Deptuch
-    if (t >= 0 && t<0.2) eval = (0.8 / 0.2) * t ;
-    else if (t >= 0.2 && t<0.7) eval = 0.8 - (0.1 / 0.5)*(t - 0.2);
-    else if (t>=0.7 && t < 1.5) eval = 0.7 - (0.7 / 0.8)*(t - 0.7);
+    double p1_time = 0.05*(1+random_p1_time);
+    double p2_time = 0.2*(1+random_p2_time);
+    double p3_time = 0.7*(1+random_p3_time);
+    double p4_time = 1.5*(1+random_p4_time);
+    double p1_amp = 0.2*(1+random_p1_amp);
+    double p2_amp = 0.8*(1+random_p1_amp);
+    double p3_amp = 0.7*(1+random_p1_amp);
+    const double p4_amp = 0.0;
+
+    
+    if (t >= 0 && t<p1_time) eval = (p1_amp/p1_time) * t ;
+    else if (t >= p1_time && t<p2_time) eval = p1_amp + ((p2_amp-p1_amp) / (p2_time-p1_time)) * (t - p1_time) ;
+    else if (t >= p2_time && t<p3_time) eval = p2_amp + ((p3_amp-p2_amp) / (p3_time-p2_time)) * (t - p2_time) ;
+    else if (t >= p3_time && t<p4_time) eval = p3_amp + ((p4_amp-p3_amp) / (p4_time-p3_time)) * (t - p3_time) ;  
     else eval = 0;
+    
+    //Fixed Pulse from Deptuch
+    // if (t >= 0 && t<0.05) eval = (0.8 / 0.2) * t ;
+    // else if (t >= 0 && t<0.2) eval = (0.8 / 0.2) * t ;
+    // else if (t >= 0.2 && t<0.7) eval = 0.8 - (0.1 / 0.5)*(t - 0.2);
+    // else if (t>=0.7 && t < 1.5) eval = 0.7 - (0.7 / 0.8)*(t - 0.7);
+    // else eval = 0;
   }
 
   //Delta Function
