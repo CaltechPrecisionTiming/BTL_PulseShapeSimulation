@@ -40,8 +40,12 @@ public:
   //NOISE
   double WhiteNoise(double mean, double rms);
   double WhiteNoiseShapedPulse( double x );
+  double WhiteNoiseShapedPulse_ZOH( double x );
+  double DiscriteWhiteNoiseShapedPulse( int i );
+
   //
   double ImpulseResponse( double x );
+  double ZOH_Response(double x, double T, int k);
   double NormalizedImpulseResponse( double x );
   bool SetSinglePhotonResponse( std::string function_name );
   bool SetIntegrationMethod(std::string integration_method );
@@ -53,6 +57,7 @@ public:
   void SetScintillationDecay( double tau_s ){ scintillation_decay_constant = tau_s;};//units in ns
   void SetHighPassFilterRC( double rc ){ high_pass_filter_RC = rc;};
   double GetSinglePhotonResponseNormalization(){return single_photon_response_normalization;};
+  double* GetNoiseArray();
 
 protected:
   std::string function_name;
@@ -83,14 +88,16 @@ protected:
   double random_p1_amp = 0;
   double random_p2_amp = 0;
   double random_p3_amp = 0;
-  
 
 
-  //internal parameters 
+
+  //internal parameters
   float integrationWindowLow_;
   float integrationWindowHigh_;
   int NIntegrationPoints_;
-  
+  const double integration_noise_step_ = 0.01;
+  int npoints_noise_;
+
   int NIntegrationPointsLGADSignal_;
   float IntegralTimeStepSignal_;
 
