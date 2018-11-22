@@ -17,8 +17,8 @@ bool PulseShape::_warning = false;
 
 int main ( int argc, char** argv )
 {
-
-  const float gain = 1e7;
+  const float gain = 1e2;
+  const float v_to_mv = 1e3;
   TH1F* h = new TH1F("pulse_time", "pulse_time", 2000, -10,10);
   TH1F* input_voltage = new TH1F("voltage", "voltage", 100, 0,1-3);
   TH1F* voltage_rms = new TH1F("voltage_rms", "voltage_rms", 100, 0,1-3);
@@ -29,15 +29,44 @@ int main ( int argc, char** argv )
   config->GetCommandLineArgs(argc, argv);
   config->ParseConfigurationFile(config->config_file);
 
+  /*
+  Setting parameters for simulation.
+  */
   const int NFilter = config->NFilter;
   const int n_experiments = config->n_experiments;
   const double ShapingTime = config->ShapingTime;
-  const double SNR = config->SNR;
+  double SNR = config->SNR;
   double SignalAmplitudeMean = config->SignalAmplitudeMean;
   double NoiseRMS = SignalAmplitudeMean / SNR;
   const int randomSeed = config->randomSeed;
   string LGADSignalFilename = config->LGADSignalFilename;
   TRandom3 *random = new TRandom3(randomSeed);
+
+  /*
+  Obtain signal to noise ratio  scale factor.
+  This is shaping time dependent, we define the signal to noise ratio as the MPV amplitude over the RMS noise
+  after the pre-amp. Therefore we need to apply a scale factor to the SNR at the input to obtain the desired
+  SNR at the pre-amp output.
+  */
+  double snr_scale_factor = 1.0;
+  if ( ShapingTime == 1.0 )
+  {
+    snr_scale_factor = 5.0;
+  }
+  else if ( ShapingTime == 2.0 )
+  {
+    snr_scale_factor = 3.65;
+  }
+  else if ( ShapingTime == 4.0 )
+  {
+    snr_scale_factor = 2.58;
+  }
+  else
+  {
+    std::cerr << "[WARNING]: SNR_scale_factor not found for this shaping_time: " << ShapingTime << std::endl;
+  }
+
+  SNR = SNR/5.0;
 
   bool useLGADPulseLibrary = false;
   TFile *LGADSignalFile = 0;
@@ -54,6 +83,7 @@ int main ( int argc, char** argv )
   //Load the LGAD Signal Pulses into memory
   //******************************************************************
   std::vector<std::vector< std::pair<double,double > > > LGADSignalLibrary;
+  //std::map<double,double> LGADSignalLibrary_map;
   if (useLGADPulseLibrary) {
     std::cout << "Loading LGAD Signal Pulses into memory from : " << LGADSignalFilename << "\n";
     const int npointsSignal = 1500;
@@ -68,16 +98,18 @@ int main ( int argc, char** argv )
       LGADSignalTree->GetEntry(i);
       double max_voltage = 0;
       double signal_rms = 0;
+      //LGADSignalLibrary_map.clear();
       for (int j=0; j < npointsSignal; j++) {
-        double current_voltage = impedance * tmpAmp[j]*gain;
+        double current_voltage = impedance * tmpAmp[j] * gain * v_to_mv;
         pulse.push_back( std::pair<double,double>( tmpTime[j] , current_voltage ));
-        if ( max_voltage < impedance * tmpAmp[j] ) max_voltage = current_voltage;
-        if ( j < 1100 ) signal_rms = pow(current_voltage, 2.0);
+        //LGADSignalLibrary_map[tmpTime[j]] = current_voltage;
+        if ( max_voltage < current_voltage ) max_voltage = current_voltage;
+        if ( j < 1100 ) signal_rms += pow(current_voltage, 2.0);
       }
       LGADSignalLibrary.push_back(pulse);
+      //LGADSignalLibrary_map.push_back(current_pulse);
       input_voltage->Fill(max_voltage);
       voltage_rms->Fill(sqrt(signal_rms/1100.));
-      //std::cout << max_voltage << std::endl;
     }
     LGADSignalFile->Close();
   }
@@ -95,7 +127,8 @@ int main ( int argc, char** argv )
 
   std::cout << "mpv max voltage: " << mpv_max_voltage << " , mpv rms voltage: " <<  mpv_voltage_rms << std::endl;
 
-  SignalAmplitudeMean = mpv_voltage_rms;
+  SignalAmplitudeMean = mpv_max_voltage;//Use peak volatge as figure of merit for noise
+  //SignalAmplitudeMean = mpv_voltage_rms;//Use RMS as figure of merit for noise
   NoiseRMS = SignalAmplitudeMean / SNR;
   //std::cout << "integral: " << input_voltage->GetMean() << std::endl;
 
@@ -117,33 +150,51 @@ int main ( int argc, char** argv )
   PulseShape* ps;
   TGraph* total_pulse;
   TGraph* scintillation_pulse;
-  TGraph* dark_noise;
+  TGraph* dark_noise_fourier;
   TGraph* white_noise;
   TGraph* white_noise_pulse;
 
   double step = 0.01;
   double x_low  = 0;
-  double x_high = 50;
+  double x_high = 100;
 
   const int npoints  = (x_high-x_low)/step;
   std::cout << "[INFO] number of points per pulse: " << npoints << std::endl;
   std::cout << "[INFO] sampling rate is: " << step  << " ns" << std::endl;
+  const int lgad_points = 1500;
+  float lgad_voltage[lgad_points], lgad_time[lgad_points];
   float x[npoints];
   float y[npoints], y_signal[npoints], y_dc[npoints], y_wnps[npoints];
+  const int n_fourier = 500;
+  float spectrum[n_fourier];
+  float spectrum_shaped[n_fourier];
+  float spectrum_lgad[n_fourier];
+  float frequency[n_fourier];
   double* noise_v2 = new double[npoints];
-  double noise[npoints];
+  float noise[npoints];
   int i_evt;
+  float input_noise_rms, output_noise_rms;
   pulse->Branch("i_evt", &i_evt, "i_evt/i");
   pulse->Branch("channel", y, Form("channel[%d]/F", npoints));
-  pulse->Branch("noise", &noise[0], Form("noise[%d]/D", npoints));
+  pulse->Branch("lgad_voltage", lgad_voltage, Form("lgad_voltage[%d]/F", lgad_points));
+  pulse->Branch("lgad_time", lgad_time, Form("lgad_time[%d]/F", lgad_points));
+  pulse->Branch("noise", &noise[0], Form("noise[%d]/F", npoints));
   pulse->Branch("shapednoise", y_wnps, Form("shapednoise[%d]/F", npoints));
   pulse->Branch("time", x, Form("time[%d]/F", npoints));
+  pulse->Branch("frequency", frequency, Form("frequency[%d]/F", n_fourier));
+  pulse->Branch("spectrum", spectrum, Form("spectrum[%d]/F", n_fourier));
+  pulse->Branch("spectrum_shaped", spectrum_shaped, Form("spectrum_shaped[%d]/F", n_fourier));
+  pulse->Branch("spectrum_lgad", spectrum_lgad, Form("spectrum_lgad[%d]/F", n_fourier));
+  pulse->Branch("input_noise_rms", &input_noise_rms, "input_noise_rms/F");
+  pulse->Branch("output_noise_rms", &output_noise_rms, "output_noise_rms/F");
   for ( int j = 0; j < n_experiments; j++ )
   {
     if ( j % 1 == 0 )std::cout << "Generating Event #" << j << std::endl;
     //reset variables and objects
     for( int i = 0; i < npoints; i++ ) y[i] = x[i] = 0.0;
     double y_max = 0;
+    input_noise_rms = 0.0;
+    output_noise_rms = 0.0;
 
     //create pulse shape object
     double normalization = 0;
@@ -168,11 +219,25 @@ int main ( int argc, char** argv )
       normalization = normalization / (1.0 + random->Gaus(0,0.2));
     }
 
+
+    /*
+    Get LGAD Pulses
+    */
+    for (int i = 0; i < lgad_points; i++)
+    {
+      lgad_voltage[i] = LGADSignalLibrary.at(0).at(i).second;
+      lgad_time[i] = LGADSignalLibrary.at(0).at(i).first*0.0010;
+    }
+
     //populate the pulse shape
+    float impulse_response[npoints];
     for( int i = 0; i < npoints; i++ )
     {
       x[i] = x_low + double(i)*step;
+      //lgad_voltage[i] = LGADSignalLibrary_map[x[i]];
       ////if ( i % 1000 == 0 ) std::cout << "iteration #" << i << std::endl;
+      //impulse_response[i] = ps->GetSine(10., x[i]);
+      //impulse_response[i] = ps->NormalizedImpulseResponse(x[i]);
       y_signal[i]   = ps->LGADShapedPulse(x[i]) / normalization;
       y_wnps[i] = ps->WhiteNoiseShapedPulse(x[i]);
       //y_wnps[i] = ps->WhiteNoiseShapedPulse_ZOH(x[i]);
@@ -181,35 +246,37 @@ int main ( int argc, char** argv )
       y[i]     = y_signal[i] + y_wnps[i];// + y_dc[i];
       if( y[i] > y_max ) y_max = y[i];
     }
-
-
-
-    double t_stamp = -999;
-    for( int i = 0; i < npoints; i++ )
-    {
-      if ( y[i] > 0.15 )
-      {
-        t_stamp = (x[i]+x[i+1])/2.;
-        break;
-      }
-    }
-
-    h->Fill(t_stamp);
     i_evt = j;
+
+    /*
+    contraption to get original noise array from PulseShape Class
+    */
     noise_v2 = ps->GetNoiseArray();
-    double input_noise_rms_simulation = 0;
-    double output_noise_rms_simulation = 0;
+    //double input_noise_rms_simulation = 0;
+    //double output_noise_rms_simulation = 0;
     for( int i = 0; i < npoints; i++)
     {
       noise[i] = noise_v2[i];
-      //std::cout << "here: " << noise[i] << std::endl;
-      input_noise_rms_simulation += noise[i]*noise[i];
-      output_noise_rms_simulation += y_wnps[i]*y_wnps[i];
+      input_noise_rms += noise[i]*noise[i];
+      output_noise_rms += y_wnps[i]*y_wnps[i];
     }
-    input_noise_rms_simulation = sqrt(input_noise_rms_simulation/npoints);
-    output_noise_rms_simulation = sqrt(output_noise_rms_simulation/npoints);
-    std::cout << "input noise rms: " << input_noise_rms_simulation << std::endl;
-    std::cout << "output noise rms: " << output_noise_rms_simulation << std::endl;
+
+    input_noise_rms = sqrt(input_noise_rms/npoints);
+    output_noise_rms = sqrt(output_noise_rms/npoints);
+    //std::cout << "input noise rms: " << input_noise_rms << std::endl;
+    //std::cout << "output noise rms: " << output_noise_rms << std::endl;
+    /*
+    for (int i = 0; i < n_fourier; i++)
+    {
+      frequency[i] = double(i)*0.010;//10 MHz steps
+      //std::cout << "freq: " << frequency[i] << std::endl;
+      spectrum[i] = -1;
+      //spectrum[i] = ps->FrequencySpectrum(frequency[i], x[0], x[npoints-1], npoints, impulse_response, x);
+      spectrum[i] = ps->FrequencySpectrum(frequency[i], x[0], x[npoints-1], npoints, noise, x);
+      spectrum_shaped[i] = ps->FrequencySpectrum(frequency[i], x[0], x[npoints-1], npoints, y_wnps, x);
+      spectrum_lgad[i] = ps->FrequencySpectrum(frequency[i], lgad_time[0], lgad_time[lgad_points-1], lgad_points, lgad_voltage, lgad_time);
+    }
+    */
     pulse->Fill();
     delete ps;//release memory of pulseshape object.
   }
@@ -217,18 +284,25 @@ int main ( int argc, char** argv )
   ps = NULL;
 
   TFile* f = new TFile(config->output_file.c_str(), "recreate");
-  total_pulse = new TGraph( npoints, x, y);
-  scintillation_pulse = new TGraph( npoints, x, y_signal);
-  //dark_noise = new TGraph( npoints, x, noise);
+  //total_pulse = new TGraph( npoints, x, y);
+  //scintillation_pulse = new TGraph( npoints, x, y_signal);
+  //dark_noise_fourier = new TGraph( n_fourier, frequency, fourier_spectrum);
   //white_noise = new TGraph( npoints, x, noise);
-  white_noise_pulse = new TGraph( npoints, x, y_wnps);
+  //white_noise_pulse = new TGraph( npoints, x, y_wnps);
   /*
   plot total pulse
   */
+  /*
   TCanvas *cv = new TCanvas("Cv","Cv", 800,800);
   cv->SetLeftMargin(0.13);
   cv->SetBottomMargin(0.12);
   cv->SetRightMargin(0.05);
+  cv->SetLogy(0);
+  dark_noise_fourier->SetMarkerStyle(22);
+  dark_noise_fourier->Draw("AP");
+  cv->SaveAs("fourier.pdf");
+*/
+  /*
   //h->GetXaxis()->SetRangeUser(-1e5, 0);
   total_pulse->SetTitle("");
   total_pulse->Draw("AC*");
@@ -239,10 +313,8 @@ int main ( int argc, char** argv )
   cv->SetLogy();
   cv->SaveAs("Convolution2.pdf");
 
-  /*
   plot white noise
-  */
-  /*
+
   white_noise->SetTitle("");
   white_noise->SetMarkerStyle(20);
   white_noise->SetMarkerSize(0.3);
@@ -256,12 +328,9 @@ int main ( int argc, char** argv )
   white_noise->GetXaxis()->SetRangeUser(0,10);
   cv->SetLogy(0);
   cv->SaveAs("WhiteNoise1.pdf");
-  */
 
-  /*
   plot white noise shaped
-  */
-  /*
+
   white_noise_pulse->SetTitle("");
   white_noise_pulse->SetMarkerStyle(20);
   white_noise_pulse->SetMarkerSize(0.3);
@@ -280,7 +349,12 @@ int main ( int argc, char** argv )
   white_noise_pulse->GetXaxis()->SetRangeUser(0,50);
   cv->SetLogy(0);
   cv->SaveAs("WhiteNoiseShaped1.pdf");
-  */
+
+
+
+  //landau->Draw("same");
+
+
   input_voltage->Draw("HISTO");
   landau->Draw("same");
   cv->SaveAs("voltage.pdf");
@@ -289,16 +363,19 @@ int main ( int argc, char** argv )
   landau_rms->Draw("same");
   cv->SaveAs("voltage_rms.pdf");
 
-  /*
-  write objects to TTree
-  */
-  pulse->Write();
+
+
+  //write objects to TTree
+
+
   //total_pulse->Write("total_pulse");
   //scintillation_pulse->Write("scintillation_pulse");
   //dark_noise->Write("dark_noise");
   h->Write("h");
   input_voltage->Write("voltage");
   voltage_rms->Write("voltage_rms");
+  */
+  pulse->Write();
   f->Close();
 
   return 0;

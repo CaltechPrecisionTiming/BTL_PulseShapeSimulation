@@ -423,3 +423,30 @@ double* PulseShape::GetNoiseArray()
   for ( int i = 0; i < npoints_noise_; i++ ) return_noise[i] = noise[i];
   return return_noise;
 };
+
+float PulseShape::FrequencySpectrum(double freq, double tMin, double tMax, unsigned int n_samples, float* my_channel, float* my_time)
+{
+  const int range = 0; // extension of samples to be used beyond [tMin, tMax]
+	double deltaT = (my_time[n_samples - 1] - my_time[0])/(double)(n_samples); // sampling time interval
+	double fCut = 0.5/deltaT; // cut frequency = 0.5 * sampling frequency from WST
+	int n_min = floor(tMin/deltaT) - range; // first sample to use
+	int n_max = ceil(tMax/deltaT) + range; // last sample to use
+	n_min = std::max(n_min,0); // check low limit
+	n_max = std::min(n_max, (int)(n_samples)); // check high limit
+	int n_0 = (n_min + n_max)/2;
+
+	TComplex s(0.,0.); // Fourier transform at freq
+	TComplex I(0.,1.); // i
+
+  //std::cout << "deltaT: " << deltaT << n_min << " " << n_max << std::endl;
+  //deltaT = 0.01;
+	for(int n = n_min; n <= n_max; n++)
+	{
+    double time = double(n*deltaT);
+    //double time = double(deltaT*(n-n_0));
+    //s += deltaT*(double)my_channel[n]*TComplex::Exp(-I*(2.*TMath::Pi()*freq*(n-n_0)*deltaT));//maybe don't need n_0 here, I think it will just add a phase to the fourier transform
+    s += deltaT*(double)my_channel[n]*TComplex::Exp(-I*(2.*TMath::Pi()*freq*time));
+    //std::cout << "s: " << s << " " << time << std::endl;
+	}
+  return s.Rho();
+};

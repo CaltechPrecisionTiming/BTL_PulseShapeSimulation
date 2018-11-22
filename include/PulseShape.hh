@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <math.h>
 //ROOT
 #include <TF1.h>
 #include <TROOT.h>
@@ -12,6 +13,7 @@
 #include <TGraph.h>
 #include <TString.h>
 #include <TTree.h>
+#include <TComplex.h>
 #include <vector>
 
 class PulseShape
@@ -42,11 +44,13 @@ public:
   double WhiteNoiseShapedPulse( double x );
   double WhiteNoiseShapedPulse_ZOH( double x );
   double DiscriteWhiteNoiseShapedPulse( int i );
+  float FrequencySpectrum(double freq, double tMin, double tMax, unsigned int n_samples, float* my_channel, float* my_time);
 
   //
   double ImpulseResponse( double x );
   double ZOH_Response(double x, double T, int k);
   double NormalizedImpulseResponse( double x );
+  double GetSine( double f, double x ) { return sin(f*x);};
   bool SetSinglePhotonResponse( std::string function_name );
   bool SetIntegrationMethod(std::string integration_method );
   void SetNpe( int npe ){ Npe = npe;};
