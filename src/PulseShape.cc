@@ -113,24 +113,12 @@ PulseShape::PulseShape( double tau, int nf, float NoiseRMS, int seed)
   //****************************
   //Simulate the Noise
   //****************************
-  //const int npoints_noise = int((integrationWindowHigh_ - integrationWindowLow_)/integration_noise_step_);
+  npoints_noise_ = int((integrationWindowHigh_ - integrationWindowLow_)/integration_noise_step_);
   noise = new double[npoints_noise_];
   for ( int i  = 0; i < npoints_noise_; i++ )
   {
     noise[i] = WhiteNoise(0,NoiseRMS);
   }
-
-  //****************************
-  //Simulate the Noise
-  //****************************
-  random_p1_time = random_->Gaus(0, 0.1);
-  random_p2_time = random_->Gaus(0, 0.1);
-  random_p3_time = random_->Gaus(0, 0.1);
-  random_p4_time = random_->Gaus(0, 0.1);
-  random_p1_amp = random_->Gaus(0, 0.1);
-  random_p2_amp = random_->Gaus(0, 0.1);
-  random_p3_amp = random_->Gaus(0, 0.1);
-  std::cout << "random: " << random_p1_time << "\n";
 
 };
 
@@ -370,9 +358,11 @@ double PulseShape::DiscriteWhiteNoiseShapedPulse( int i )
 
 double PulseShape::ImpulseResponse( double x )
 {
-  //const double timeShift = 0.0;
+  const double timeShift = 20.0;
   double eval = 0;
   double omegashaper = NFilter_ / shapingTime_;
+
+  x = x - timeShift;
 
   if (x>=0) {
     eval = exp(-omegashaper*x) * pow(x,NFilter_)*(1/pow(shapingTime_,NFilter_+1));

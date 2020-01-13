@@ -258,19 +258,27 @@ void Configuration::GetCommandLineArgs(int argc, char **argv)
   output_file = ParseCommandLine( argc, argv, "output_file" );
   if (output_file == "")
   {
-    if ( _warning ) { std::cerr << "output file not provided" << std::endl; }
+    if ( _warning ) 
+      {
+	std::cerr << "output file not provided, quitting!. Use --output_file=<output.root>" << std::endl;
+	exit(0);
+      }
   }
 
   config_file = ParseCommandLine( argc, argv, "config_file" );
   if (config_file == "")
   {
-    if ( _warning ) { std::cerr << "config file not provided" << std::endl; }
+    if ( _warning ) 
+      {
+	std::cerr << "config file not provided, quitting!. Use --config_file=<config>" << std::endl;
+	exit(0);
+      }
   }
 
   TString n_exp = ParseCommandLine( argc, argv, "n_experiments" );
   if (n_exp == "")
   {
-    if ( _warning ) { std::cerr << "number of experiments not provided, using 1k" << std::endl; }
+    if ( _warning ) { std::cerr << "number of experiments not provided, using 1k. Use --n_experiments=<n_exp>" << std::endl; }
     n_experiments = 1000;
   }
   else
